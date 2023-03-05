@@ -1,0 +1,173 @@
+body {
+    background-color: black;
+    color: #00FF3C;
+    font-size: 1rem;
+    font-weight: 400;
+    line-height: 1.5;
+    margin: 0;
+    text-align: left;
+    border: 0px;
+    }
+html {overflow-y: scroll;}
+.header {
+    background-color: black;
+    margin-bottom: 4rem;
+    padding: 1rem 1rem;
+    text-align: center;
+    }
+.popup {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    }
+.popup .text {
+    visibility: hidden;
+    width: 110px;
+    background-color: #00FF3C;
+    color: black;
+    text-align: center;
+    border-radius: 4px;
+    padding: 9px ;
+    position: absolute;
+    margin-left: 35px;
+    margin-top: 93px;
+    z-index:6;
+    }
+.popup .text4 {
+    font-size:small;
+    visibility: hidden;
+    width: 170px;
+    background-color: #00FF3C;
+    color: black;
+    text-align: center;
+    border-radius: 4px;
+    padding: 5px ;
+    position: absolute;
+    margin-left: 10px;
+    margin-top: -50px;
+    z-index:6;
+    }
+.popup .text::after {
+    content: "";
+    position: absolute;
+    top: 15%;
+    right: 100%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color:  transparent black transparent transparent;
+    }
+.popup .show {
+    visibility: visible;
+    }
+.text{
+        font-size:small;
+    }
+.text2{
+    position: relative;
+    top: 155%;
+    font-size:small;
+    right: -50%;
+    margin-top: -20px;
+    text-decoration: yellow double underline;
+    color: yellow;
+    }
+.text3{
+    position: relative;
+    margin-right: -70px;
+    margin-bottom: 5px;
+    color: yellow;
+    font-weight: bolder;
+    }
+.navbar-brand{
+    font-size: 1rem;
+    text-decoration: underline;
+    font-weight: bolder;
+    color: black;
+    font-family: Times,serif;
+    margin-bottom: -20px;
+    }
+.button1{
+    border-radius: 4px;
+    padding: 12px 28px;
+    background-color: #00FF3C;
+    border: none;
+    color: black;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    }
+.button1:hover {
+    background-color: yellow;
+    color: black;
+  }
+a.button1 {
+    background-color: gold;
+    color: black;
+  }
+.offcanvas{
+    background-color:#f3f6f9;
+    color: Black;
+    }
+.nav-link {
+    display: block;
+    padding: .5rem 1rem;
+    color: blue;
+    transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out;
+    }
+.center h3{
+    font-family: Times,serif;
+    font-weight: bolder;
+    }
+.centered{
+    text-align: center;
+    }
+.li{
+    text-align: left;
+    margin: 0;
+    float: left;
+    padding: 0;
+    }
+.ul{
+    text-align: left;
+    margin: 0rem;
+    padding:0;
+    }
+.large{
+    font-size: large;
+    }
+.medium{
+    font-size: medium;
+    }
+.small{
+    font-size: small;
+    }
+.section {
+    padding: 0.5rem 0.25rem 0.5rem 0.25rem;
+    margin: 2rem 1rem 4rem 1rem;
+    background:none;
+    text-align: left;
+    }
+.accordion-button{
+    text-align: left;
+    }
+.accordion-body{
+    padding: 1rem 0rem 1rem 0rem;
+    margin: 0rem;
+    border:0;
+    }
+.accordion-item{
+    font-size: medium;
+    padding: 0;
+    margin: 0;
+    }
+.center {
+    text-align: center;
+    }
+.accordion-body  {
+    text-align: left;
+    background:black;
+    }
+.accordion-color {
+    color:purple;
+}
