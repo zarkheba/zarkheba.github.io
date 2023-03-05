@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Word Search Puzzle</title>
+    <style>
+      /* grid styles */
+      .grid-container {
+        display: grid;
+        grid-template-columns: repeat(10, 1fr);
+        grid-template-rows: repeat(10, 1fr);
+        grid-gap: 2px;
+        margin-bottom: 20px;
+      }
+      .grid-item {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #fff;
+        border-radius: 4px;
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        text-align: center;
+        user-select: none;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+      .grid-item.yellow {
+        background-color: #ffff99;
+      }
+      .grid-item.green {
+        background-color: #66ff66;
+      }
+      
+      /* button styles */
+      .button-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+      .button {
+        background-color: #4CAF50;
+        border: none;
+        border-radius: 4px;
+        color: white;
+        padding: 12px 24px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+      .button:hover {
+        background-color: #3e8e41;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grid-container">
+      <!-- generate grid with random letters -->
+      <script>
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const rows = document.querySelectorAll('.grid-container > div');
+        for (let i = 0; i < rows.length; i++) {
+          const cells = rows[i].querySelectorAll('.grid-item');
+          for (let j = 0; j < cells.length; j++) {
+            const letter = letters.charAt(Math.floor(Math.random() * letters.length));
+            cells[j].textContent = letter;
+          }
+        }
+      </script>
+      <!-- end grid generation -->
+    </div>
+    <div class="button-container">
+      <button class="button" id="enter-button">Enter Selected Letters</button>
+    </div>
+    <script>
+      const gridItems = document.querySelectorAll('.grid-item');
+      const enterButton = document.getElementById('enter-button');
+      let clicked = false;
+      
+      // add click event listener to each grid item
+      gridItems.forEach(item => {
+        item.addEventListener('mousedown', () => {
+          item.classList.add('yellow');
+          clicked = true;
+        });
+        item.addEventListener('mouseover', () => {
+          if (clicked) {
+            item.classList.add('yellow');
+          }
+        });
+        item.addEventListener('mouseup', () => {
+          clicked = false;
+        });
+      });
+      
+      // add click event listener to enter button
+      enterButton.addEventListener('click', () => {
+        gridItems.forEach(item => {
+          if (item.classList.contains('yellow')) {
+            item.classList.remove('yellow');
+            item.classList.add('green');
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
