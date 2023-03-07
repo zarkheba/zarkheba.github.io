@@ -1,0 +1,85 @@
+
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Word Swipe Game</title>
+    <style>
+      #word-grid {
+        display: grid;
+        grid-template-columns: repeat(10, 50px);
+        grid-template-rows: repeat(10, 50px);
+        justify-content: center;
+        align-items: center;
+        gap: 5px;
+      }
+      .grid-letter {
+        background-color: #ffffff;
+        border-radius: 5px;
+        font-size: 24px;
+        text-align: center;
+        line-height: 50px;
+        user-select: none;
+        transition: background-color 0.2s ease-in-out;
+      }
+      .grid-letter.selected,
+      .grid-letter.yellow {
+        background-color: #ffff00;
+      }
+      .grid-letter.green {
+        background-color: #00ff00;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="word-grid"></div>
+    <a href="/creativeai.html">link to Creative AI List</a>
+    <center><button id="enter-letters-btn">Enter Selected Letters</button></center>
+    <script>
+      // Create array of letters to randomly populate the grid
+      const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'];
+
+      // Create the grid of letters
+      const grid = document.getElementById('word-grid');
+      for (let i = 0; i < 100; i++) {
+        const letter = letters[Math.floor(Math.random() * letters.length)];
+        const div = document.createElement('div');
+        div.className = 'grid-letter';
+        div.innerText = letter;
+        grid.appendChild(div);
+      }
+
+      // Add event listeners to each letter in the grid
+      let selectedLetters = [];
+      const gridLetters = document.querySelectorAll('.grid-letter');
+      gridLetters.forEach(letter => {
+        letter.addEventListener('mousedown', () => {
+          letter.classList.add('selected');
+          letter.classList.add('yellow');
+          selectedLetters.push(letter);
+        });
+        letter.addEventListener('mouseup', () => {
+          letter.classList.remove('selected');
+        });
+        letter.addEventListener('mouseenter', () => {
+          if (event.buttons === 1) {
+            letter.classList.add('selected');
+            letter.classList.add('yellow');
+            selectedLetters.push(letter);
+          }
+        });
+      });
+
+      // Add event listener to enter letters button
+      const enterLettersBtn = document.getElementById('enter-letters-btn');
+      enterLettersBtn.addEventListener('click', () => {
+        selectedLetters.forEach(letter => {
+          letter.classList.remove('yellow');
+          letter.classList.add('green');
+        });
+        selectedLetters = [];
+      });
+    </script>
+  </body>
+</html>
