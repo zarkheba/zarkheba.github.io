@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>3D Cube</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        perspective: 1000px;
+      }
+
+      #container {
+        width: 200px;
+        height: 200px;
+        position: relative;
+        transform-style: preserve-3d;
+        transition: transform 1s;
+      }
+
+      #cube {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        transform-style: preserve-3d;
+        transform: rotateX(45deg) rotateY(-45deg) translateZ(-100px);
+      }
+
+      .face {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        border: 2px solid black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 32px;
+        font-weight: bold;
+      }
+
+      #front {
+        transform: translateZ(100px);
+      }
+
+      #back {
+        transform: rotateY(180deg) translateZ(100px);
+      }
+
+      #right {
+        transform: rotateY(90deg) translateZ(100px);
+      }
+
+      #left {
+        transform: rotateY(-90deg) translateZ(100px);
+      }
+
+      #top {
+        transform: rotateX(-90deg)  translateZ(100px);
+      }
+
+      #bottom {
+        transform: rotateX(90deg) translateZ(100px);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="container" onmousedown="start(event)" ontouchstart="start(event)">
+      <div id="cube">
+        <div id="front" class="face">Coder</div>
+        <div id="back" class="face">Writer</div>
+        <div id="right" class="face">Artist</div>
+        <div id="left" class="face">Editor</div>
+        <div id="top" class="face">SEO</div>
+        <div id="bottom" class="face">Advisor</div>
+      </div>
+    </div>
+
+    <script>
+      var x, y;
+      var isDown = false;
+
+      function start(e) {
+        isDown = true;
+        x = e.clientX || e.touches[0].clientX;
+        y = e.clientY || e.touches[0].clientY;
+      }
+
+      function move(e) {
+        if (isDown) {
+          var newX = e.clientX || e.touches[0].clientX;
+          var newY = e.clientY || e.touches[0].clientY;
+          var deltaX = newX - x;
+          var deltaY = newY - y;
+          x = newX;
+          y = newY;
+          var cube = document.getElementById('cube');
+          cube.style.transform += 'rotateX(' + deltaY + 'deg) rotateY(' + deltaX + 'deg)';
+        }
+      }
+
+      function end() {
+        isDown = false;
+      }
+
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', end);
+      document.addEventListener('touchmove', move);
+      document.addEventListener('touchend', end);
+    </script>
+  </body>
+</html>
