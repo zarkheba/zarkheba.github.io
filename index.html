@@ -188,30 +188,7 @@
         overlay.classList.remove('active');
       });
 	    
-	smallImages.forEach(img => {
-  img.addEventListener('click', () => {
-    const largeImageUrl = img.getAttribute('data-large-image-url');
-    const linkUrl = img.getAttribute('data-link-url');
-
-    overlay.innerHTML = `
-      <div class="modal">
-        <a href="${linkUrl}" target="_blank">Link to website</a>
-        <img src="${largeImageUrl}" alt="Large Image">
-      </div>
-    `;
-    overlay.classList.add('active');
-
-    const link = overlay.querySelector('a');
-    link.addEventListener('click', (event) => {
-      event.stopPropagation();
-    });
-  });
-});
-
-overlay.addEventListener('click', () => {
-  overlay.classList.remove('active');
-});    
-	    
+  
 	    
 	    
     </script>
