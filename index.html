@@ -89,12 +89,12 @@
         left: 50%;
         transform: translate(-50%, -50%);
       }
+
       .overlay.active {
         display: flex;
         justify-content: center;
         align-items: center;
       }
-
       .canvas {
 		display: block;
 		margin: auto;
@@ -105,17 +105,47 @@
   <body>
     <div class="container">
       <div class="left-column">
-	<img src="https://zarkheba.github.io/catalogs-200x200-2.png?text=Great Gift Catalogs" alt="Great Gift Catalogs Wordpress Website" data-large-image-url="https://zarkheba.github.io/catalogs-600wide.png?text=Great Gift Catalogs" alt="Great Gift Catalogs Wordpress Website">
-        <img src="https://zarkheba.github.io/darklyLit-200x200-2.png?text=Darkly+Lit+Theater" alt="Darkly Lit Theater" data-large-image-url="https://zarkheba.github.io/darklyLit-600wide.png?text=Darkly+Lit+Theater">
-        <img src="https://zarkheba.github.io/Popper-200x200-2.png?text=Puffer+Popper" alt="Puffer Popper Game" data-large-image-url="https://zarkheba.github.io/Popper-600wide.png?text=Puffer+Popper">
-        <img src="https://zarkheba.github.io/NotSoSecret-200x200.png?text=Not+So+Secret+Books" alt="Not So Secret Books" data-large-image-url="https://zarkheba.github.io/600wide-NotSoSecret2.png?text=Not+So+-Secret+Books">  
-      </div>
+        <img src="https://zarkheba.github.io/catalogs-200x200-2.png?text=Great Gift Catalogs" alt="Great Gift Catalogs Wordpress Website" data-large-image-url="https://zarkheba.github.io/catalogs-600wide.png?text=Great Gift Catalogs" alt="Great Gift Catalogs Wordpress Website">
+              <img src="https://zarkheba.github.io/darklyLit-200x200-2.png?text=Darkly+Lit+Theater" alt="Darkly Lit Theater" data-large-image-url="https://zarkheba.github.io/darklyLit-600wide.png?text=Darkly+Lit+Theater">
+              <img src="https://zarkheba.github.io/Popper-200x200-2.png?text=Puffer+Popper" alt="Puffer Popper Game" data-large-image-url="https://zarkheba.github.io/Popper-600wide.png?text=Puffer+Popper">
+              <img src="https://zarkheba.github.io/NotSoSecret-200x200.png?text=Not+So+Secret+Books" alt="Not So Secret Books" data-large-image-url="https://zarkheba.github.io/600wide-NotSoSecret2.png?text=Not+So+-Secret+Books">  
+            </div>
       <div class="center-column">
         <div class="logo">
           
 	<canvas id="myCanvas"></canvas>
 
-	
+	<script>
+		var canvas = document.getElementById("myCanvas");
+		var ctx = canvas.getContext("2d");
+		canvas.width = 82;
+		canvas.height = 178;
+		ctx.beginPath();
+		ctx.moveTo(28, 10);
+		ctx.lineTo(10, 90);
+		ctx.lineTo(30, 90);
+		ctx.lineTo(15, 150);
+		ctx.lineTo(70, 70);
+		ctx.lineTo(50, 70);
+		ctx.lineTo(71, 15);
+		ctx.lineTo(26, 10);
+		ctx.lineWidth = 6;
+		ctx.strokeStyle = "#000000";
+		ctx.stroke();
+
+		function flicker() {
+			if (Math.random() < 0.05) {
+				if (ctx.fillStyle == "#ffff00") {
+					ctx.fillStyle = "#000000";
+				} else {
+					ctx.fillStyle = "#ffff00";
+				}
+			}
+			ctx.fill();
+		}
+		
+		var intervalID = setInterval(flicker, 50);
+	</script>
 
 
         </div>
@@ -157,6 +187,7 @@
       </div>
      
      
+     
       <div class="right-column">
         <img src="https://zarkheba.github.io/dr.deranged200x200.png?text=Dr+Deranged" alt="Dr. Deranged" data-large-image-url="https://zarkheba.github.io/dr.deranged600wide.png?text=Dr+Deranged">
         <img src="https://zarkheba.github.io/moviebuzz-200x200-3.png?text=New+Movie+Buzz" alt="New Movie Buzz" data-large-image-url="https://zarkheba.github.io/moviebuzz-600wide2.png?text=New+Movie+Buzz">
@@ -187,10 +218,6 @@
       overlay.addEventListener('click', () => {
         overlay.classList.remove('active');
       });
-	    
-  
-	    
-	    
     </script>
   </body>
 </html>
