@@ -75,16 +75,28 @@
         right: 0;
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.5);
-        z-index: 9999;
+        z-index: 1;
         display: none;
       }
 
+      .link-text {
+  position: relative;
+  background-color: rgb(46, 235, 62);
+  padding: 20px 30px;
+  z-index: 3;
+  font-size: 24px;
+  border: 3px solid black;
+  border-radius: 20px;
+  bottom: -150px;
+  right: 0px;
+}
       .overlay img {
         max-width: 80%;
         max-height: 80%;
         margin: auto;
         display: block;
         position: absolute;
+        z-index: 3;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
@@ -105,10 +117,10 @@
   <body>
     <div class="container">
       <div class="left-column">
-        <img src="https://zarkheba.github.io/catalogs-200x200-2.png?text=Great Gift Catalogs" alt="Great Gift Catalogs Wordpress Website" data-large-image-url="https://zarkheba.github.io/catalogs-600wide.png?text=Great Gift Catalogs" alt="Great Gift Catalogs Wordpress Website">
-              <img src="https://zarkheba.github.io/darklyLit-200x200-2.png?text=Darkly+Lit+Theater" alt="Darkly Lit Theater" data-large-image-url="https://zarkheba.github.io/darklyLit-600wide.png?text=Darkly+Lit+Theater">
-              <img src="https://zarkheba.github.io/Popper-200x200-2.png?text=Puffer+Popper" alt="Puffer Popper Game" data-large-image-url="https://zarkheba.github.io/Popper-600wide.png?text=Puffer+Popper">
-              <img src="https://zarkheba.github.io/NotSoSecret-200x200.png?text=Not+So+Secret+Books" alt="Not So Secret Books" data-large-image-url="https://zarkheba.github.io/600wide-NotSoSecret2.png?text=Not+So+-Secret+Books">  
+        <img src="https://zarkheba.github.io/catalogs-200x200-2.png?text=Great Gift Catalogs" alt="Great Gift Catalogs Wordpress Website" data-large-image-url="https://zarkheba.github.io/catalogs-600wide.png?text=Great Gift Catalogs" alt="Great Gift Catalogs Wordpress Website" data-link-url="https://greatgiftcatalogs.com/" data-link-text="Go to Great Gift Catalogs">
+              <img src="https://zarkheba.github.io/darklyLit-200x200-2.png?text=Darkly+Lit+Theater" alt="Darkly Lit Theater" data-large-image-url="https://zarkheba.github.io/darklyLit-600wide.png?text=Darkly+Lit+Theater"data-link-url="https://www.youtube.com/darklylittheater" data-link-text="Watch darkly Lit Theater">
+              <img src="https://zarkheba.github.io/Popper-200x200-2.png?text=Puffer+Popper" alt="Puffer Popper Game" data-large-image-url="https://zarkheba.github.io/Popper-600wide.png?text=Puffer+Popper" data-link-url="/puffer.html" data-link-text="Play Puffer Popper">
+              <img src="https://zarkheba.github.io/NotSoSecret-200x200.png?text=Not+So+Secret+Books" alt="Not So Secret Books" data-large-image-url="https://zarkheba.github.io/600wide-NotSoSecret2.png?text=Not+So+-Secret+Books"data-link-url="https://notsosecretbooks.com/not-so-secret-secrets-of-success/" data-link-text="Go to Not So Secret Books">
             </div>
       <div class="center-column">
         <div class="logo">
@@ -150,22 +162,29 @@
 
         </div>
         <div class="logo-text">James Rice</div>
-       
+        <br>
         <div class="banner-text">AI Whisperer</div>
-         <br><div><a href="/cube1.html">cube 1</a></div>
-        <div><a href="/cube2.html">cube 2</a></div>
-        <div><a href="/lightning.html">lightning</a></div>
-        <div><a href="/particles.html">particles</a></div>
-        <div><a href="/puzzle.html">puzzle</a></div>
-         <div> <a href="https://greatgiftcatalogs.com/">catalogs</a></div>
-        <div><a href="https://99notebooks.com/">notebooks</a></div>
-        <div><a href="https://www.redbubble.com/people/SamSupershirt/shop?asc=u">redbubble</a></div>
+        <br>
+        <div class="banner-text">Coder</div>
+        <br>
+        <div class="banner-text">Video Editor</div>
+        <br>
+        <div class="banner-text">Writer</div>
+        <br>
+        <div class="banner-text">Affiliate Marketer</div>
+        <br>
+        <div class="banner-text">Artist</div>
+         <br><br><br>
+         <div> <a href="https://greatgiftcatalogs.com/">Great Gift Catalogs</a></div>
+        <div><a href="https://99notebooks.com/">99 Notebooks</a></div>
+        <div><a href="https://www.redbubble.com/people/SamSupershirt/shop?asc=u">Redbubble Store</a></div>
         <div><a href="https://www.youtube.com/darklylittheater">Darkly Lit Theater</a></div>
-       <div><a href="/puffer.html">PufferPopper</a></div>
-      <div><a href="https://notsosecretbooks.com/not-so-secret-secrets-of-success/">Not-so-secret</a></div>
+       <div><a href="/puffer.html">Puffer Popper Game</a></div>
+      <div><a href="https://notsosecretbooks.com/not-so-secret-secrets-of-success/">Not-So-Secret Books</a></div>
         <div><br></div>
        
-
+<div>Archived</div>
+<div></div>
 
 <div><a href="https://web.archive.org/web/20120111112759/http://newmoviebuzz.com/">New Movie Buzz</a></div>
 <div><a href="https://web.archive.org/web/20130210032454/http://ncmountainfun.com/">NC Mountain Fun</a></div>
@@ -183,42 +202,59 @@
 
 
 
-<div><a href="https://web.archive.org/web/20110224204247/http://carolinafever.com/">Carolina Fever</a></div> <div><a href="https://web.archive.org/web/20110207130335/http://freeinternetmarketingaudio.com/">Free Iinternet Marketing Audio</a></div>
+<div><a href="https://web.archive.org/web/20110207130335/http://freeinternetmarketingaudio.com/">Free Iinternet Marketing Audio</a></div>
       </div>
      
      
      
-      <div class="right-column">
-        <img src="https://zarkheba.github.io/dr.deranged200x200.png?text=Dr+Deranged" alt="Dr. Deranged" data-large-image-url="https://zarkheba.github.io/dr.deranged600wide.png?text=Dr+Deranged">
-        <img src="https://zarkheba.github.io/moviebuzz-200x200-3.png?text=New+Movie+Buzz" alt="New Movie Buzz" data-large-image-url="https://zarkheba.github.io/moviebuzz-600wide2.png?text=New+Movie+Buzz">
-        <img src="https://zarkheba.github.io/ghost-200x200.png?text=Ghost+101" alt="Ghost 101" data-large-image-url="https://zarkheba.github.io/ghost-600wide.png?text=Ghost+101">
-	<img src="https://zarkheba.github.io/99Notebooks200x200-3.png?text=99+Notebooks" alt="99 Notebooks" data-large-image-url="https://zarkheba.github.io/99Notebooks600wide.png?text=99+Notebooks">
-      </div>
+<div class="right-column">
+  
+  <img src="https://zarkheba.github.io/dr.deranged200x200.png?text=Dr+Deranged" alt="Dr. Deranged" data-large-image-url="https://zarkheba.github.io/dr.deranged600wide.png?text=Dr+Deranged" data-link-url="https://web.archive.org/web/20110207141350/http://doctorderanged.com/" data-link-text="See Dr. Deranged">
+  <img src="https://zarkheba.github.io/moviebuzz-200x200-3.png?text=New+Movie+Buzz" alt="New Movie Buzz" data-large-image-url="https://zarkheba.github.io/moviebuzz-600wide2.png?text=New+Movie+Buzz" data-link-url="https://web.archive.org/web/20120111112759/http://newmoviebuzz.com/" data-link-text="See New Movie Buzz">
+  <img src="https://zarkheba.github.io/ghost-200x200.png?text=Ghost+101" alt="Ghost 101" data-large-image-url="https://zarkheba.github.io/ghost-600wide.png?text=Ghost+101" data-link-url="https://web.archive.org/web/20130203095418/http://ghost101.com/" data-link-text="See Ghost 101">
+  <img src="https://zarkheba.github.io/99Notebooks200x200-3.png?text=99+Notebooks" alt="99 Notebooks" data-large-image-url="https://zarkheba.github.io/99Notebooks600wide.png?text=99+Notebooks" data-link-url="https://99notebooks.com/" data-link-text="Go to 99 Notebooks">
+
+</div>
     </div>
   
     <div class="overlay"></div>
   
+
+      </div>
+    </div>
     <script>
-      const smallImages = document.querySelectorAll('img[data-large-image-url]');
-      const overlay = document.querySelector('.overlay');
-  
-      smallImages.forEach(img => {
-        img.addEventListener('click', () => {
-          const largeImageUrl = img.getAttribute('data-large-image-url');
-  
-          overlay.innerHTML = `
-            <div class="modal">
-              <img src="${largeImageUrl}" alt="Large Image">
-            </div>
-          `;
-          overlay.classList.add('active');
-        });
-      });
-  
-      overlay.addEventListener('click', () => {
-        overlay.classList.remove('active');
-      });
+const smallImages = document.querySelectorAll('img[data-large-image-url]');
+const overlay = document.querySelector('.overlay');
+
+smallImages.forEach(img => {
+  img.addEventListener('click', () => {
+    const largeImageUrl = img.getAttribute('data-large-image-url');
+    const linkUrl = img.getAttribute('data-link-url');
+    const linkText = img.getAttribute('data-link-text');
+
+    overlay.innerHTML = `
+      <div class="modal">
+        <a href="${linkUrl}" target="_blank">
+          <img src="${largeImageUrl}" alt="Go to this Website">
+          <br><br> <br><br> <br><br>
+          <div class="link-text">${linkText}</div>
+        </a>
+      </div>
+    `;
+    overlay.classList.add('active');
+  });
+});
+
+overlay.addEventListener('click', () => {
+  overlay.classList.remove('active');
+});
+function hideImage() {
+  var imageDiv = document.querySelector('.right-column div');
+  imageDiv.style.display = 'none';
+}
     </script>
+
+    
   </body>
 </html>
 
