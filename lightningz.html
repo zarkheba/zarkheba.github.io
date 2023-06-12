@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Electric Arc Effect</title>
+  <style>
+    #canvas {
+        height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  background-color: #220452;
+    }
+    #button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 3;
+    }
+    #image {
+      position: absolute;
+      top: 50px;
+      left: 50px;
+      width: 100px;
+      height: 100px;
+      background-image: url("https://dummyimage.com/100x100/000/fff");
+      z-index: 0;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+  <button id="button">Click me</button>
+  <div id="image"></div>
+  <script>
+const canvas = document.getElementById("canvas");
+const context = canvas.getContext('2d');
+const lightningStrikeOffset = 5;
+const lightningStrikeLength = 100;
+const lightningBoltLength = 5;
+const lightningThickness = 4;
+const canvasHeight = canvas.height;
+const canvasWidth = canvas.width;
+
+const createVector = function(x, y) { return { x, y } }
+
+const getRandomFloat = function(min, max) {
+  const random = Math.random() * (max - min + 1) + min;
+  return random;
+}
+
+const getRandomInteger = function(min, max) {
+  return Math.floor(getRandomFloat(min, max)); 
+}
+
+const clearCanvas = function(x, y, height, width) {
+  rectX = x || 0;
+  rectY = y || 0;
+  rectHeight = height || canvasHeight;
+  rectWidth = width || canvasWidth;
+  context.clearRect(rectX, rectY, rectWidth, rectHeight);
+  context.beginPath();
+}
+
+const line = function(start, end, thickness, opacity) {
+  context.beginPath();
+  context.moveTo(start.x, start.y);
+  context.lineTo(end.x, end.y);
+  context.lineWidth = thickness;
+  context.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+  context.shadowBlur = 30;
+  context.shadowColor = "#bd9df2";
+  context.stroke();
+  context.closePath();
+}
+
+class Lightning {
+  constructor(x1, y1, x2, y2, thickness, opacity) {
+    this.start = createVector(x1, y1);
+    this.end = createVector(x2, y2);
+    this.thickness = thickness;
+    this.opacity = opacity;
+  }
+  draw() {
+    return line(this.start, this.end, this.thickness, this.opacity);
+  }
+}
+
+const interval = 3000;
+// const lightningStrikeOffset = 5;
+// const lightningStrikeLength = 100;
+// const lightningBoltLength = Math.random() * 10;
+// const lightningThickness = 4;
+let lightning = [];
+
+
+const createLightning = function() {
+  lightning = [];
+  const image = document.getElementById("image");
+  const imageRect = image.getBoundingClientRect();
+
+const imageCenterX = imageRect.left + imageRect.width / 2;
+const imageCenterY = imageRect.top + imageRect.height / 2;
+const lightningX1 = 50; // Replace with your desired X-coordinate value
+
+const lightningY1 = 50;
+
+
+
+
+  const lightningX2 = getRandomInteger(lightningX1 - lightningStrikeOffset, lightningX1 + lightningStrikeOffset);
+  lightning[0] = new Lightning(lightningX1, imageRect.top, lightningX2, imageRect.top + lightningBoltLength, lightningThickness, 7);
+
+  for (let l = 1; l < lightningStrikeLength; l++) {
+    const lastBolt = lightning[l - 1];
+    const lx1 = lastBolt.end.x;
+    const lx2 = getRandomInteger(lx1 - lightningStrikeOffset, lx1 + lightningStrikeOffset);
+    lightning.push(new Lightning(
+      lx1,
+      lastBolt.end.y,
+      lx2,
+      lastBolt.end.y + lightningBoltLength,
+      lastBolt.thickness,
+      lastBolt.opacity
+    ));
+  }
+};
+
+
+const setup = function() {
+  const button = document.getElementById("button");
+  const image = document.getElementById("image");
+
+  button.addEventListener("click", function() {
+    createLightning();
+    animate();
+  });
+
+  createLightning();
+  animate();
+};
+
+document.getElementById("button").addEventListener("click", () => {
+  const button = document.getElementById("button");
+  const image = document.getElementById("image");
+
+  createLightning();
+  animate();
+});
+
+
+
+const animate = function() {
+  clearCanvas();
+
+  for (let i = 0 ; i < lightning.length ; i++) {
+    lightning[i].opacity -= 0.01;
+    lightning[i].thickness -= 0.05;
+    if (lightning[i].thickness <= 2) {
+      lightning[i].end.y -= 0.05;
+    }
+    lightning[i].draw();
+  }
+
+  requestAnimationFrame(animate);
+}
+
+
+requestAnimationFrame(animate);
+
+
+document.getElementById("button").addEventListener("click", () => {
+  const button = document.getElementById("button");
+  const image = document.getElementById("image");
+
+  createLightning();
+  animate();
+});
+
+
+  </script>
+</body>
+</html>
