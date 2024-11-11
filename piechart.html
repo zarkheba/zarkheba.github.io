@@ -1,0 +1,287 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic Pie Chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .container { display: flex; align-items: flex-start; margin: auto; width: 80%; }
+        .chart-container { width: 40%; margin-right: 20px; }
+        .table-container { width: 30%; } /* Adjusted table width to be narrower */
+        input { width: 100%; margin: 5px 0; }
+        table { width: 100%; margin-bottom: 20px; border-collapse: collapse; }
+        th, td { text-align: left; padding: 8px; border: 1px solid #ddd; }
+        .sample-chart-container { position: absolute; top: 100px; right: 20px; padding: 10px; } /* Added padding */
+        .sample-chart { margin-bottom: 20px; padding: 10px; border: 1px solid #ddd; border-radius: 5px; } /* Added padding and border */
+        
+        /* Background colors for table cells */
+        .stock-based { background-color: rgba(255, 99, 132, 0.3); } /* Lighter shade of #FF6384 */
+        .income-producing { background-color: rgba(54, 162, 235, 0.3); } /* Lighter shade of #36A2EB */
+        .structured-products { background-color: rgba(255, 206, 86, 0.3); } /* Lighter shade of #FFCE56 */
+        .low-correlation { background-color: rgba(75, 192, 192, 0.3); } /* Lighter shade of #4BC0C0 */
+        .unallocated { background-color: rgba(204, 204, 204, 0.3); } /* Lighter shade of #CCCCCC */
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chart-container">
+            <h2>Allocate Your Budget</h2>
+            <canvas id="myPieChart" width="300" height="300"></canvas>
+        </div>
+        <div class="table-container">
+            <label>Total Funds: <input type="number" id="totalFunds" value="1000" oninput="updateChart()"></label>
+            <table>
+                <tr>
+                    <th>Investment Type</th>
+                    <th>Dollar Amount</th>
+                    <th>Percentage</th>
+                </tr>
+                <tr class="stock-based">
+                    <td>Stock Based Investments</td>
+                    <td id="amount1">$0.00</td>
+                    <td><input type="number" id="percent1" value="50" oninput="validatePercentage('percent1')"></td>
+                </tr>
+                <tr class="income-producing">
+                    <td>Income Producing ETFs/Funds</td>
+                    <td id="amount2">$0.00</td>
+                    <td><input type="number" id="percent2" value="5" oninput="validatePercentage('percent2')"></td>
+                </tr>
+                <tr class="structured-products">
+                    <td>Structured Products with Safety Net</td>
+                    <td id="amount3">$0.00</td>
+                    <td><input type="number" id="percent3" value="15" oninput="validatePercentage('percent3')"></td>
+                </tr>
+                <tr class="low-correlation">
+                    <td>Low Correlation Funds/ETFs/Bonds</td>
+                    <td id="amount4">$0.00</td>
+                    <td><input type="number" id="percent4" value="5" oninput="validatePercentage('percent4')"></td>
+                </tr>
+                <tr class="unallocated">
+                    <td><strong>Unallocated</strong></td>
+                    <td id="amountUnallocated">$0.00</td>
+                    <td><strong id="percentUnallocated">0.00</strong>%</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <!-- Sample Pie Chart Container -->
+    <div class="sample-chart-container">
+        <h3>Low End Allocations</h3>
+        <canvas id="samplePieChart1" width="200" height="200" class="sample-chart"></canvas>
+        <h3>High End Allocations</h3>
+        <canvas id="samplePieChart2" width="200" height="200" class="sample-chart"></canvas>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('myPieChart').getContext('2d');
+        let myPieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['Stock Based Investments', 'Income Producing ETFs/Funds', 'Structured Products with Safety Net', 'Low Correlation Funds/ETFs/Bonds', 'Unallocated'],
+                datasets: [{
+                    data: [0, 0, 0, 0, 0],
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#CCCCCC'],
+                }]
+            },
+            options: {
+                responsive: true,
+                tooltips: {
+                    callbacks: {
+                        label: function(tooltipItem) {
+                            const dataset = tooltipItem.dataset;
+                            const total = dataset.data.reduce((a, b) => a + b, 0);
+                            const currentValue = dataset.data[tooltipItem.index];
+                            const percentage = total > 0 ? ((currentValue / total) * 100).toFixed(2) : 0;
+                            return `${dataset.labels[tooltipItem.index]}: $${currentValue.toFixed(2)} (${percentage}%)`;
+                        }
+                    }
+                },
+                onClick: (event) => {
+                    const activePoints = myPieChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, false);
+                    if (activePoints.length) {
+                        const index = activePoints[0].index;
+                        const currentPercentage = (myPieChart.data.datasets[0].data[index] / parseFloat(document.getElementById('totalFunds').value) * 100).toFixed(2);
+                        const newPercentage = prompt("Enter new percentage for " + myPieChart.data.labels[index] + ":", currentPercentage);
+                        if (newPercentage !== null) {
+                            updateAllocation(index, parseFloat(newPercentage));
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initialize Sample Pie Chart 1
+        const sampleCtx1 = document.getElementById('samplePieChart1').getContext('2d');
+        let samplePieChart1 = new Chart(sampleCtx1, {
+            type: 'pie',
+            data: {
+                labels: ['Stock Based Investments', 'Income Producing ETFs/Funds', 'Structured Products with Safety Net', 'Low Correlation Funds/ETFs/Bonds', 'Unallocated'],
+                datasets: [{
+                    data: [50, 5, 15, 5, 25], // Pre-populated values for Sample Pie Chart 1 with "Unallocated"
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#CCCCCC'], // Added color for "Unallocated"
+                }]
+            },
+            options: {
+                responsive: true,
+                tooltips: {
+                    callbacks: {
+                        label: function(tooltipItem) {
+                            const dataset = tooltipItem.dataset;
+                            const total = dataset.data.reduce((a, b) => a + b, 0);
+                            const currentValue = dataset.data[tooltipItem.index];
+                            const percentage = total > 0 ? ((currentValue / total) * 100).toFixed(2) : 0;
+                            return `${dataset.labels[tooltipItem.index]}: ${currentValue} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        });
+
+        // Initialize Sample Pie Chart 2
+        const sampleCtx2 = document.getElementById('samplePieChart2').getContext('2d');
+        let samplePieChart2 = new Chart(sampleCtx2, {
+            type: 'pie',
+            data: {
+                labels: ['Stock Based Investments', 'Income Producing ETFs/Funds', 'Structured Products with Safety Net', 'Low Correlation Funds/ETFs/Bonds', 'Unallocated'],
+                datasets: [{
+                    data: [60, 10, 25, 10, 5], // Pre-populated values for Sample Pie Chart 2 with "Unallocated"
+                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#CCCCCC'], // Added color for "Unallocated"
+                }]
+            },
+            options: {
+                responsive: true,
+                tooltips: {
+                    callbacks: {
+                        label: function(tooltipItem) {
+                            const dataset = tooltipItem.dataset;
+                            const total = dataset.data.reduce((a, b) => a + b, 0);
+                            const currentValue = dataset.data[tooltipItem.index];
+                            const percentage = total > 0 ? ((currentValue / total) * 100).toFixed(2) : 0;
+                            return `${dataset.labels[tooltipItem.index]}: ${currentValue} (${percentage}%)`;
+                        }
+                    }
+                }
+            }
+        });
+
+        function updateChart() {
+            const totalFunds = parseFloat(document.getElementById('totalFunds').value) || 0;
+            const percent1 = parseFloat(document.getElementById('percent1').value) || 0;
+            const percent2 = parseFloat(document.getElementById('percent2').value) || 0;
+            const percent3 = parseFloat(document.getElementById('percent3').value) || 0;
+            const percent4 = parseFloat(document.getElementById('percent4').value) || 0;
+
+            // Ensure no section is less than 5%
+            if (percent1 < 5) percent1 = 5;
+            if (percent2 < 5) percent2 = 5;
+            if (percent3 < 5) percent3 = 5;
+            if (percent4 < 5) percent4 = 5;
+
+            // Calculate dollar amounts based on percentages
+            const amount1 = (percent1 / 100) * totalFunds;
+            const amount2 = (percent2 / 100) * totalFunds;
+            const amount3 = (percent3 / 100) * totalFunds;
+            const amount4 = (percent4 / 100) * totalFunds;
+
+            // Update dollar amounts in the table
+            document.getElementById('amount1').innerText = `$${amount1.toFixed(2)}`;
+            document.getElementById('amount2').innerText = `$${amount2.toFixed(2)}`;
+            document.getElementById('amount3').innerText = `$${amount3.toFixed(2)}`;
+            document.getElementById('amount4').innerText = `$${amount4.toFixed(2)}`;
+
+            // Calculate unallocated amount
+            const totalPercentage = percent1 + percent2 + percent3 + percent4;
+            const unallocatedPercentage = Math.max(0, 100 - totalPercentage);
+            const unallocatedAmount = (unallocatedPercentage / 100) * totalFunds;
+
+            // Update unallocated values in the table
+            document.getElementById('amountUnallocated').innerText = `$${unallocatedAmount.toFixed(2)}`;
+            document.getElementById('percentUnallocated').innerText = unallocatedPercentage.toFixed(2);
+
+            myPieChart.data.datasets[0].data = [amount1, amount2, amount3, amount4, unallocatedAmount];
+            myPieChart.update();
+        }
+
+        function validatePercentage(inputId) {
+            const inputField = document.getElementById(inputId);
+            let value = parseFloat(inputField.value) || 0;
+
+            // Ensure no section is less than 5% or negative
+            if (value < 5) {
+                value = 5;
+            } else if (value < 0) {
+                value = 0;
+            }
+
+            inputField.value = value.toFixed(2);
+            updateChart();
+            adjustPercentages(inputId);
+        }
+
+        function updateDollarFromPercentage(inputId) {
+            const totalFunds = parseFloat(document.getElementById('totalFunds').value) || 0;
+            const percentValue = parseFloat(document.getElementById(inputId).value) || 0;
+
+            // Update the chart and dollar amounts
+            updateChart();
+        }
+
+        function adjustPercentages(changedInputId) {
+            const totalFunds = parseFloat(document.getElementById('totalFunds').value) || 0;
+            const totalPercentage = parseFloat(document.getElementById('percent1').value) + parseFloat(document.getElementById('percent2').value) +
+                                   parseFloat(document.getElementById('percent3').value) + parseFloat(document.getElementById('percent4').value);
+
+            if (totalPercentage > 100) {
+                const excess = totalPercentage - 100;
+                const inputs = ['percent1', 'percent2', 'percent3', 'percent4'];
+
+                // Adjust other percentages
+                for (let inputId of inputs) {
+                    if (inputId !== changedInputId) {
+                        const currentPercent = parseFloat(document.getElementById(inputId).value);
+                        const newPercent = Math.max(5, currentPercent - (excess / (inputs.length - 1))); // Ensure no section goes below 5%
+                        document.getElementById(inputId).value = newPercent.toFixed(2);
+                    }
+                }
+            }
+        }
+
+        function updateAllocation(index, newPercentage) {
+            if (newPercentage < 5 || newPercentage > 100) { // Ensure no section is less than 5% or more than 100%
+                alert("Percentage must be between 5 and 100.");
+                return;
+            }
+
+            const totalFunds = parseFloat(document.getElementById('totalFunds').value) || 0;
+            const currentValues = myPieChart.data.datasets[0].data;
+
+            // Update the dataset
+            currentValues[index] = (newPercentage / 100) * totalFunds;
+
+            // Recalculate the percentages
+            const totalPercentage = currentValues.reduce((a, b) => a + (b / totalFunds * 100), 0);
+            const adjustment = totalPercentage - 100;
+
+            if (adjustment > 0) {
+                // If adjustment is positive, we need to decrease the other percentages
+                let remainingAdjustment = adjustment;
+                for (let i = 0; i < currentValues.length; i++) {
+                    if (i !== index) {
+                        const currentPercent = (currentValues[i] / totalFunds) * 100;
+                        const newPercent = Math.max(5, currentPercent - (remainingAdjustment / (currentValues.length - 1))); // Ensure no section goes below 5%
+                        currentValues[i] = (newPercent / 100) * totalFunds;
+                        remainingAdjustment -= (currentPercent - newPercent);
+                    }
+                }
+            }
+
+            myPieChart.update();
+            updateChart();
+        }
+    </script>
+</body>
+</html>
