@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Set viewport for mobile devices -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Route Scheduler</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      padding: 20px; 
+      margin: 0; 
+      background: #fafafa;
+    }
+    .container { 
+      max-width: 100%; 
+      overflow-x: auto; 
+      margin-top: 20px;
+    }
+    table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      margin-top: 20px; 
+      min-width: 600px;
+    }
+    th, td { 
+      border: 1px solid #ddd; 
+      padding: 8px; 
+      text-align: center; 
+    }
+    th { 
+      background-color: #f4f4f4; 
+    }
+    input, button, textarea { 
+      margin: 5px; 
+      padding: 8px; 
+      font-size: 16px; 
+    }
+    .now-button { 
+      font-size: 12px; 
+      background-color: red; 
+      color: white; 
+      border: none; 
+      padding: 4px 8px; 
+      cursor: pointer; 
+    }
+    .update-notice { 
+      margin-top: 20px; 
+      font-weight: bold; 
+      color: green; 
+    }
+    .displayTime { 
+      margin-left: 5px; 
+      font-size: 0.9em; 
+      color: #555; 
+    }
+    /* Mobile specific adjustments */
+    @media (max-width: 600px) {
+      table {
+         min-width: 100%;
+         table-layout: fixed;
+      }
+      /* Squish columns 2 and 3 */
+      table col.squish {
+         width: 60px !important;
+      }
+      /* Ensure text in these columns doesn’t overflow */
+      table th:nth-child(2),
+      table td:nth-child(2),
+      table th:nth-child(3),
+      table td:nth-child(3) {
+         overflow: hidden;
+         white-space: nowrap;
+         text-overflow: ellipsis;
+      }
+      .now-button { 
+         font-size: 36px; /* 3 times the original size */
+         padding: 12px 24px; 
+      }
+      input, button, textarea { 
+         font-size: 16px; 
+         padding: 8px; 
+      }
+      th, td { 
+         padding: 8px; 
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>Route Scheduler</h2>
+  <label for="startTime">Start Time (Departure from First Stop):</label>
+  <input type="time" id="startTime" value="09:00">
+  <button id="calcScheduleButton">Calculate Schedule</button>
+  
+  <!-- Section for pasting Google Maps Route Details -->
+  <h3>Paste Google Maps Route Details</h3>
+  <textarea id="detailsInput" rows="6" style="width:100%;" placeholder="Paste the full text from the 'Details' section of your Google Maps route here"></textarea>
+  <button id="loadDetailsButton">Load Route Details</button>
+  
+  <h3>Stops</h3>
+  <div class="container">
+    <table>
+      <colgroup>
+        <col>
+        <col class="squish">
+        <col class="squish">
+        <col>
+        <col>
+        <col>
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Stop</th>
+          <th>Drive Time (min)</th>
+          <th>Distance (miles)</th>
+          <th>Arrival Time</th>
+          <th>Departure Time</th>
+          <th>Time at Stop (min)</th>
+        </tr>
+      </thead>
+      <tbody id="stopsTable"></tbody>
+    </table>
+  </div>
+  <p id="updateNotice" class="update-notice"></p>
+  <button id="saveCSVButton">Save as CSV</button>
+  
+  <script>
+    // Parse Google Maps Route Details.
+    function parseGoogleMapsDetails(detailsText) {
+      detailsText = detailsText.replace(/[^\x20-\x7E\n]/g, '');
+      detailsText = detailsText.replace(/\[.*?\]/g, '');
+      
+      let lines = detailsText.split('\n').map(line => line.trim()).filter(line => line !== "");
+      let stopsArray = [];
+      
+      const storeMapping = {
+        "ingles": { duration: 60 },
+        "publix": { duration: 60 },
+        "food lion": { duration: 75 },
+        "harris teeter": { duration: 90 },
+        "speedway": { duration: 30 },
+        "target": { duration: 60 },
+        "sav mor": { duration: 60 }
+      };
+      
+      const drivePattern = /(\d+)\s*min\s*\(\s*([\d\.]+)\s*mi\)/i;
+      
+      if (lines.length && !drivePattern.test(lines[0])) {
+        stopsArray.push({
+          name: lines[0],
+          driveTime: 0,
+          distance: 0,
+          duration: 0
+        });
+        lines.shift();
+      }
+      
+      let candidateDriveData = null;
+      function clipAfterZip(text) {
+        let match = text.match(/NC\s*\d{5}/i);
+        if (match) {
+          return text.substring(0, match.index + match[0].length);
+        }
+        return text;
+      }
+      
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        let driveMatch = line.match(drivePattern);
+        if (driveMatch) {
+          candidateDriveData = {
+            driveTime: parseInt(driveMatch[1], 10),
+            distance: parseFloat(driveMatch[2])
+          };
+          continue;
+        }
+        
+        if (candidateDriveData && line.indexOf(',') > -1) {
+          let storeName = (i > 0 ? lines[i - 1].trim() : "");
+          let parts = line.split(',');
+          if (parts.length >= 2) {
+            let address = parts[0].trim();
+            let town = parts.slice(1).map(s => s.trim()).join(", ");
+            
+            address = clipAfterZip(address);
+            town = clipAfterZip(town);
+            
+            let formattedName = "<b>" + storeName + "</b>";
+            if (address) {
+              formattedName += "<br>" + address;
+            }
+            if (town) {
+              formattedName += "<br>" + town;
+            }
+            
+            let dwell = 60;
+            for (let key in storeMapping) {
+              if (storeName.toLowerCase().includes(key)) {
+                dwell = storeMapping[key].duration;
+                break;
+              }
+            }
+            
+            stopsArray.push({
+              name: formattedName,
+              driveTime: candidateDriveData.driveTime,
+              distance: candidateDriveData.distance,
+              duration: dwell
+            });
+            candidateDriveData = null;
+            
+            if (i > 0 && line.toLowerCase().includes("40 spruce pine")) {
+              break;
+            }
+          }
+        }
+      }
+      
+      if (stopsArray.length) {
+        let lastStopText = stopsArray[stopsArray.length - 1].name.replace(/<[^>]+>/g, '').toLowerCase();
+        if (!lastStopText.includes("40 spruce pine")) {
+          stopsArray.push({
+            name: "40 Spruce Pine Dr",
+            driveTime: candidateDriveData ? candidateDriveData.driveTime : 0,
+            distance: candidateDriveData ? candidateDriveData.distance : 0,
+            duration: 0
+          });
+        }
+      }
+      
+      return stopsArray;
+    }
+    
+    var stops = [];
+    
+    function loadRouteDetails() {
+      var detailsText = document.getElementById("detailsInput").value;
+      if (detailsText.trim() === "") {
+        alert("Please paste the route details text.");
+        return;
+      }
+      stops = parseGoogleMapsDetails(detailsText);
+      if (!stops.length) {
+        alert("No valid stops were found. Please check the pasted details.");
+      }
+      updateTable();
+    }
+    
+    document.addEventListener("DOMContentLoaded", function() {
+      function formatTime(date) {
+        var hours = date.getHours().toString().padStart(2, '0');
+        var minutes = date.getMinutes().toString().padStart(2, '0');
+        return hours + ":" + minutes;
+      }
+      
+      function convertTo12Hour(timeStr) {
+        var parts = timeStr.split(':');
+        var hour = parseInt(parts[0], 10);
+        var minute = parts[1];
+        var ampm = hour >= 12 ? 'PM' : 'AM';
+        var hour12 = hour % 12;
+        if (hour12 === 0) { hour12 = 12; }
+        return hour12 + ":" + minute + " " + ampm;
+      }
+      
+      function getCurrentTime() {
+        return formatTime(new Date());
+      }
+      
+      function calculateSchedule() {
+        var startTime = document.getElementById("startTime").value;
+        var parts = startTime.split(":");
+        var hours = parseInt(parts[0], 10);
+        var minutes = parseInt(parts[1], 10);
+        var currentTime = new Date();
+        currentTime.setHours(hours, minutes, 0, 0);
+        
+        if (stops.length === 0) {
+          alert("No route details loaded. Please paste your route details and click 'Load Route Details'.");
+          return;
+        }
+        stops[0].departureTime = new Date(currentTime);
+        stops[0].arrivalTime = null;
+        
+        for (var i = 1; i < stops.length; i++) {
+          stops[i].arrivalTime = new Date(stops[i - 1].departureTime);
+          stops[i].arrivalTime.setMinutes(stops[i].arrivalTime.getMinutes() + stops[i].driveTime);
+          if (i < stops.length - 1) {
+            stops[i].departureTime = new Date(stops[i].arrivalTime);
+            stops[i].departureTime.setMinutes(stops[i].departureTime.getMinutes() + stops[i].duration);
+          }
+        }
+        updateTable();
+      }
+      
+      function updateTable() {
+        var tableBody = document.getElementById("stopsTable");
+        tableBody.innerHTML = "";
+        stops.forEach(function(stop, index) {
+          let computedDriveTime = 0;
+          if (index > 0 && stop.arrivalTime && stops[index - 1].departureTime) {
+            computedDriveTime = Math.round((stop.arrivalTime - stops[index - 1].departureTime) / 60000);
+            computedDriveTime = computedDriveTime < 0 ? 0 : computedDriveTime;
+          }
+          var arrivalTime = stop.arrivalTime ? formatTime(stop.arrivalTime) : "";
+          var departureTime = stop.departureTime ? formatTime(stop.departureTime) : "";
+          var timeAtStop = (stop.arrivalTime && stop.departureTime) ? Math.round((stop.departureTime - stop.arrivalTime) / 60000) : "";
+          
+          var arrivalCell = "";
+          if (index > 0) {
+            arrivalCell = "<input type='time' value='" + arrivalTime + "' data-index='" + index + "' data-type='arrival'>" +
+                          "<span class='displayTime'>" + convertTo12Hour(arrivalTime) + "</span>" +
+                          "<button class='now-button' data-index='" + index + "' data-type='arrival'>NOW</button>";
+          }
+          
+          var departureCell = "";
+          if (index < stops.length - 1) {
+            departureCell = "<input type='time' value='" + departureTime + "' data-index='" + index + "' data-type='departure'>" +
+                            "<span class='displayTime'>" + convertTo12Hour(departureTime) + "</span>" +
+                            "<button class='now-button' data-index='" + index + "' data-type='departure'>NOW</button>";
+          }
+          
+          var row = "<tr>" +
+                      "<td>" + stop.name + "</td>" +
+                      "<td>" + computedDriveTime + "</td>" +
+                      "<td>" + stop.distance + "</td>" +
+                      "<td>" + arrivalCell + "</td>" +
+                      "<td>" + departureCell + "</td>" +
+                      "<td>" + timeAtStop + "</td>" +
+                    "</tr>";
+          tableBody.innerHTML += row;
+        });
+        
+        var inputs = document.querySelectorAll("#stopsTable input[type='time']");
+        inputs.forEach(function(input) {
+          input.addEventListener("change", function(e) {
+            var idx = parseInt(e.target.getAttribute("data-index"), 10);
+            var type = e.target.getAttribute("data-type");
+            adjustTime(idx, type, e.target.value);
+          });
+        });
+        
+        var nowButtons = document.querySelectorAll("#stopsTable .now-button");
+        nowButtons.forEach(function(button) {
+          button.addEventListener("click", function(e) {
+            var idx = parseInt(e.target.getAttribute("data-index"), 10);
+            var type = e.target.getAttribute("data-type");
+            setNow(idx, type);
+          });
+        });
+      }
+      
+      function adjustTime(index, type, newTime) {
+        var parts = newTime.split(":");
+        var hours = parseInt(parts[0], 10);
+        var minutes = parseInt(parts[1], 10);
+        if (isNaN(hours) || isNaN(minutes)) return;
+        var currentTime = new Date();
+        currentTime.setHours(hours, minutes, 0, 0);
+        
+        if (type === "arrival") {
+          stops[index].arrivalTime = new Date(currentTime);
+          if (index < stops.length - 1) {
+            stops[index].departureTime = new Date(stops[index].arrivalTime);
+            stops[index].departureTime.setMinutes(stops[index].departureTime.getMinutes() + stops[index].duration);
+          }
+        } else {
+          stops[index].departureTime = new Date(currentTime);
+        }
+        
+        for (var i = index + 1; i < stops.length; i++) {
+          let prevDeparture = stops[i - 1].departureTime;
+          let originalDriveTime = stops[i].driveTime || 0;
+          stops[i].arrivalTime = new Date(prevDeparture);
+          stops[i].arrivalTime.setMinutes(stops[i].arrivalTime.getMinutes() + originalDriveTime);
+          stops[i].driveTime = Math.round((stops[i].arrivalTime - prevDeparture) / 60000);
+          if (i < stops.length - 1) {
+            stops[i].departureTime = new Date(stops[i].arrivalTime);
+            stops[i].departureTime.setMinutes(stops[i].departureTime.getMinutes() + stops[i].duration);
+          }
+        }
+        updateTable();
+        document.getElementById("updateNotice").innerText = "Schedule updated at " + convertTo12Hour(formatTime(new Date()));
+      }
+      
+      function setNow(index, type) {
+        var currentTime = getCurrentTime();
+        adjustTime(index, type, currentTime);
+      }
+      
+      async function saveAsCSV() {
+        var csvContent = "Stop,Drive Time (min),Distance (miles),Arrival Time,Departure Time,Time at Stop (min)\n";
+        stops.forEach(function(stop, index) {
+          var computedDriveTime = (index > 0 && stop.arrivalTime && stops[index - 1].departureTime) ?
+                                  Math.round((stop.arrivalTime - stops[index - 1].departureTime) / 60000) : 0;
+          var arrivalTime = stop.arrivalTime ? formatTime(stop.arrivalTime) : "";
+          var departureTime = stop.departureTime ? formatTime(stop.departureTime) : "";
+          var timeAtStop = (stop.arrivalTime && stop.departureTime) ? Math.round((stop.departureTime - stop.arrivalTime) / 60000) : "";
+          var tempDiv = document.createElement("div");
+          tempDiv.innerHTML = stop.name;
+          var plainName = tempDiv.textContent || tempDiv.innerText || "";
+          csvContent += plainName + "," + computedDriveTime + "," + stop.distance + "," + arrivalTime + "," + departureTime + "," + timeAtStop + "\n";
+        });
+        
+        var dateStr = new Date().toISOString().slice(0, 10);
+        var fileName = "schedule_data_" + dateStr + ".csv";
+        
+        if (window.showSaveFilePicker) {
+          try {
+            const options = {
+              suggestedName: fileName,
+              types: [
+                {
+                  description: 'CSV Files',
+                  accept: {'text/csv': ['.csv']},
+                },
+              ],
+            };
+            const handle = await window.showSaveFilePicker(options);
+            const writable = await handle.createWritable();
+            await writable.write(csvContent);
+            await writable.close();
+          } catch (err) {
+            console.error(err);
+          }
+        } else {
+          var encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+          var link = document.createElement("a");
+          link.setAttribute("href", encodedUri);
+          link.setAttribute("download", fileName);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      }
+      
+      document.getElementById("calcScheduleButton").addEventListener("click", calculateSchedule);
+      document.getElementById("saveCSVButton").addEventListener("click", saveAsCSV);
+      document.getElementById("loadDetailsButton").addEventListener("click", loadRouteDetails);
+    });
+  </script>
+</body>
+</html>
