@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grocery Price Comparison Tool</title>
+  <style>
+    :root {
+      --primary-color: #2c3e50;
+      --secondary-color: #3498db;
+      --background-color: #f8f9fa;
+      --border-color: #dee2e6;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      background-color: var(--background-color);
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background-color: white;
+      padding: 2rem;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: var(--primary-color);
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .stores-container {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .store-input {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 150px;
+    }
+    input[type="text"],
+    input[type="number"] {
+      padding: 0.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+    input[type="text"] {
+      width: 100%;
+    }
+    input[type="number"] {
+      width: 100px;
+    }
+    button {
+      background-color: var(--secondary-color);
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: background-color 0.2s;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 2rem;
+    }
+    .comparison-table th,
+    .comparison-table td {
+      padding: 1rem;
+      text-align: left;
+      border: 1px solid var(--border-color);
+    }
+    .comparison-table th {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    .comparison-table tr:nth-child(even) {
+      background-color: var(--background-color);
+    }
+    .add-item-row {
+      background-color: #edf2f7 !important;
+    }
+    .add-item-row input {
+      margin-right: 0.5rem;
+    }
+    .delete-btn {
+      background-color: #e74c3c;
+      padding: 0.25rem 0.5rem;
+    }
+    .delete-btn:hover {
+      background-color: #c0392b;
+    }
+    .edit-btn {
+      background-color: var(--secondary-color);
+      padding: 0.25rem 0.5rem;
+      margin-right: 0.25rem;
+    }
+    .check-btn {
+      background-color: #27ae60;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    .check-btn:hover {
+      background-color: #1e8449;
+    }
+    .best-price {
+      background-color: #a8e6cf;
+    }
+    /* Responsive Styles */
+    @media (max-width: 600px) {
+      .comparison-table th, .comparison-table td {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+      }
+      input[type="number"] {
+        width: 70px;
+      }
+      .stores-container {
+        flex-direction: column;
+      }
+    }
+    /* Cheapest list styling */
+    .cheapest-lists {
+      margin-top: 2rem;
+      border-top: 2px solid var(--border-color);
+      padding-top: 1rem;
+    }
+    .cheapest-lists h2 {
+      margin-bottom: 0.5rem;
+    }
+    .cheapest-lists ul {
+      list-style-type: disc;
+      margin-left: 2rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Grocery Price Comparison Tool</h1>
+
+    <div class="stores-container">
+      <div class="store-input">
+        <input type="text" class="store-name" placeholder="Store 1 Name" />
+      </div>
+      <div class="store-input">
+        <input type="text" class="store-name" placeholder="Store 2 Name" />
+      </div>
+      <div class="store-input">
+        <input type="text" class="store-name" placeholder="Store 3 Name" />
+      </div>
+      <div class="store-input">
+        <input type="text" class="store-name" placeholder="Store 4 Name" />
+      </div>
+    </div>
+
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th class="store-col">Store 1</th>
+          <th class="store-col">Store 2</th>
+          <th class="store-col">Store 3</th>
+          <th class="store-col">Store 4</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Add Item Row -->
+        <tr class="add-item-row">
+          <td><input type="text" id="new-item" placeholder="Enter item name" /></td>
+          <td><input type="number" step="0.01" min="0" class="new-price" /></td>
+          <td><input type="number" step="0.01" min="0" class="new-price" /></td>
+          <td><input type="number" step="0.01" min="0" class="new-price" /></td>
+          <td><input type="number" step="0.01" min="0" class="new-price" /></td>
+          <td><button onclick="addItem()">Add Item</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Store Lists -->
+    <div class="cheapest-lists" id="cheapest-lists"></div>
+  </div>
+
+  <script>
+    // Initialize data structure
+    let groceryData = {
+      stores: ['Store 1', 'Store 2', 'Store 3', 'Store 4'],
+      items: []
+    };
+
+    // Load data from localStorage on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      loadData();
+      updateStoreNames();
+      setupStoreNameListeners();
+    });
+
+    // Load data from localStorage
+    function loadData() {
+      const savedData = localStorage.getItem('groceryComparisonData');
+      if (savedData) {
+        groceryData = JSON.parse(savedData);
+        renderItems();
+        // Update store name inputs
+        const storeInputs = document.querySelectorAll('.store-name');
+        groceryData.stores.forEach((store, index) => {
+          if (storeInputs[index]) {
+            storeInputs[index].value = store;
+          }
+        });
+      }
+    }
+
+    // Save data to localStorage
+    function saveData() {
+      localStorage.setItem('groceryComparisonData', JSON.stringify(groceryData));
+    }
+
+    // Setup store name change listeners
+    function setupStoreNameListeners() {
+      const storeInputs = document.querySelectorAll('.store-name');
+      storeInputs.forEach((input, index) => {
+        input.addEventListener('change', () => {
+          groceryData.stores[index] = input.value || `Store ${index + 1}`;
+          updateStoreNames();
+          saveData();
+          updateCheapestLists();
+        });
+      });
+    }
+
+    // Update store names in the table header
+    function updateStoreNames() {
+      const storeCols = document.querySelectorAll('.store-col');
+      storeCols.forEach((col, index) => {
+        col.textContent = groceryData.stores[index];
+      });
+    }
+
+    // Add new item
+    function addItem() {
+      const itemName = document.getElementById('new-item').value.trim();
+      if (!itemName) return;
+
+      const prices = Array.from(document.querySelectorAll('.new-price')).map(input =>
+        input.value ? parseFloat(input.value) : null
+      );
+
+      groceryData.items.push({
+        name: itemName,
+        prices: prices,
+        editing: false
+      });
+
+      // Clear inputs
+      document.getElementById('new-item').value = '';
+      document.querySelectorAll('.new-price').forEach(input => (input.value = ''));
+
+      saveData();
+      renderItems();
+    }
+
+    // Delete item
+    function deleteItem(index) {
+      groceryData.items.splice(index, 1);
+      saveData();
+      renderItems();
+    }
+
+    // Accept edits for a row
+    function acceptEdits(index) {
+      const row = document.getElementById(`row-${index}`);
+      const nameInput = row.querySelector('.edit-name');
+      const priceInputs = row.querySelectorAll('.edit-price');
+      // Update item name and prices
+      groceryData.items[index].name = nameInput.value;
+      groceryData.items[index].prices = Array.from(priceInputs).map(input =>
+        input.value ? parseFloat(input.value) : null
+      );
+      groceryData.items[index].editing = false;
+      saveData();
+      renderItems();
+    }
+
+    // Enable editing for a row
+    function enableEditing(index) {
+      groceryData.items[index].editing = true;
+      renderItems();
+    }
+
+    // Render all items
+    function renderItems() {
+      const tbody = document.querySelector('.comparison-table tbody');
+      // Remove all rows except the add item row (which has the class "add-item-row")
+      [...tbody.querySelectorAll('tr')].forEach(row => {
+        if (!row.classList.contains('add-item-row')) row.remove();
+      });
+
+      groceryData.items.forEach((item, index) => {
+        const row = document.createElement('tr');
+        row.id = `row-${index}`;
+
+        // Item Name cell
+        const nameCell = document.createElement('td');
+        if (item.editing) {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'edit-name';
+          input.value = item.name;
+          nameCell.appendChild(input);
+        } else {
+          nameCell.textContent = item.name;
+        }
+        row.appendChild(nameCell);
+
+        // Find the lowest valid price
+        const validPrices = item.prices.filter(price => price !== null);
+        const lowestPrice = validPrices.length > 0 ? Math.min(...validPrices) : null;
+
+        // Price cells
+        item.prices.forEach((price, priceIndex) => {
+          const priceCell = document.createElement('td');
+          if (item.editing) {
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.step = '0.01';
+            input.min = '0';
+            input.className = 'edit-price';
+            input.value = price !== null ? price : '';
+            priceCell.appendChild(input);
+          } else {
+            priceCell.textContent = price !== null ? `$${price.toFixed(2)}` : '-';
+            if (price !== null && price === lowestPrice) {
+              priceCell.classList.add('best-price');
+            }
+          }
+          row.appendChild(priceCell);
+        });
+
+        // Action cell
+        const actionCell = document.createElement('td');
+        if (item.editing) {
+          // Show delete button and tiny green checkmark to accept edits
+          const deleteButton = document.createElement('button');
+          deleteButton.textContent = 'Delete';
+          deleteButton.className = 'delete-btn';
+          deleteButton.onclick = () => deleteItem(index);
+          actionCell.appendChild(deleteButton);
+
+          const checkButton = document.createElement('button');
+          checkButton.innerHTML = '✓';
+          checkButton.className = 'check-btn';
+          checkButton.onclick = () => acceptEdits(index);
+          actionCell.appendChild(checkButton);
+        } else {
+          // Show Edit button in non-editing mode
+          const editButton = document.createElement('button');
+          editButton.textContent = 'Edit';
+          editButton.className = 'edit-btn';
+          editButton.onclick = () => enableEditing(index);
+          actionCell.appendChild(editButton);
+        }
+        row.appendChild(actionCell);
+
+        tbody.insertBefore(row, tbody.querySelector('.add-item-row'));
+      });
+
+      updateCheapestLists();
+    }
+
+    // Update the cheapest items list for each store
+    function updateCheapestLists() {
+      const container = document.getElementById('cheapest-lists');
+      container.innerHTML = ''; // Clear previous content
+
+      // For each store, compile list of items where that store's price equals the lowest price
+      groceryData.stores.forEach((storeName, storeIndex) => {
+        const listTitle = document.createElement('h2');
+        listTitle.textContent = `${storeName}:`;
+        container.appendChild(listTitle);
+
+        const ul = document.createElement('ul');
+        groceryData.items.forEach(item => {
+          // Only consider item if at least one price is valid
+          const validPrices = item.prices.filter(price => price !== null);
+          if (validPrices.length > 0) {
+            const lowestPrice = Math.min(...validPrices);
+            // If the store's price equals the lowest, include the item
+            if (item.prices[storeIndex] !== null && item.prices[storeIndex] === lowestPrice) {
+              const li = document.createElement('li');
+              li.textContent = item.name + " - $" + lowestPrice.toFixed(2);
+              ul.appendChild(li);
+            }
+          }
+        });
+        if (!ul.hasChildNodes()) {
+          const li = document.createElement('li');
+          li.textContent = 'No items';
+          ul.appendChild(li);
+        }
+        container.appendChild(ul);
+      });
+    }
+  </script>
+</body>
+</html>
