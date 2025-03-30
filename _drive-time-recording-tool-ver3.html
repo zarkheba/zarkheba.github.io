@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Drive Time Logger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    /* Basic Reset */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      background: #f5f5f5;
+      color: #333;
+    }
+    h1, h2 {
+      margin-bottom: 0.5em;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    }
+    .form-group {
+      margin-bottom: 1em;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 0.25em;
+    }
+    select, button {
+      width: 100%;
+      padding: 8px;
+      font-size: 1rem;
+      margin-bottom: 0.5em;
+    }
+    button {
+      cursor: pointer;
+      background: #007BFF;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      margin-top: 0.5em;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    /* Timer in top-right corner (always visible) */
+    #timerDisplay {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: #007BFF;
+      color: #fff;
+      padding: 10px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+    /* Logs display */
+    #logsContainer {
+      margin-top: 1em;
+      max-height: 400px; 
+      overflow-y: auto; 
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 10px;
+      background: #fafafa;
+    }
+    .date-section {
+      margin-bottom: 1em;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.5em;
+    }
+    .date-section h3 {
+      margin-bottom: 0.5em;
+      background: #eee;
+      padding: 5px;
+      border-radius: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 1em;
+    }
+    th, td {
+      padding: 6px;
+      border: 1px solid #ccc;
+      text-align: left;
+    }
+    .buttons-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .buttons-row button {
+      flex: 1;
+    }
+    /* Responsive design tweaks */
+    @media (max-width: 600px) {
+      .buttons-row {
+        flex-direction: column;
+      }
+      #logsContainer {
+        max-height: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Timer always visible -->
+<div id="timerDisplay">00:00:00</div>
+
+<div class="container">
+  <h1>Drive Time Logger</h1>
+  
+  <!-- Start / End Location Selection -->
+  <div class="form-group">
+    <label for="startLocation">Start Location:</label>
+    <select id="startLocation"></select>
+  </div>
+  
+  <div class="form-group">
+    <label for="endLocation">End Location:</label>
+    <select id="endLocation"></select>
+  </div>
+  
+  <!-- Control Buttons -->
+  <div class="buttons-row">
+    <button id="startBtn" onclick="startDrive()">Start</button>
+    <button id="endBtn" onclick="endDrive()">End</button>
+    <button id="viewLogsBtn" onclick="toggleLogs()">View Logs</button>
+    <button id="downloadBtn" onclick="downloadLogs()">Download</button>
+    <button id="resetBtn" onclick="resetLogs()">Reset</button>
+  </div>
+  
+  <!-- Logs display -->
+  <div id="logsContainer"></div>
+</div>
+
+<script>
+/* 
+   =========================================
+   DATA, SORTING & DROPDOWN POPULATION
+   =========================================
+*/
+
+// Provided store list
+const storeList = [
+  { name: "Ingles Supermarket", address: "499 Weaverville Rd", city: "Asheville" },
+  { name: "Ingles Supermarket", address: "225 Carl Eller Rd", city: "Mars Hill" },
+  { name: "Ingles Supermarket", address: "5580 US 25 Hwy", city: "Marshall" },
+  { name: "Publix Super Market", address: "165 Weaver Blvd", city: "Weaverville" },
+  { name: "Ingles Supermarket", address: "140 Weaver Blvd", city: "Weaverville" },
+  { name: "Ingles Supermarket", address: "915 Merrimon Ave", city: "Asheville" },
+  { name: "Sav Mor Foods", address: "842 Merrimon Ave", city: "Asheville" },
+  { name: "Sav Mor Foods", address: "83 Plaza Loop", city: "Canton" },
+  { name: "Ingles Supermarket", address: "1678 Brown Ave Ste 1", city: "Waynesville" },
+  { name: "Ingles Supermarket", address: "259 Barber Blvd", city: "Waynesville" },
+  { name: "Publix Super Market", address: "124 Frazier St", city: "Waynesville" },
+  { name: "Food Lion", address: "179 Paragon Pkwy", city: "Clyde" },
+  { name: "Ingles Supermarket", address: "3338 Boylston Hwy", city: "Mills River" },
+  { name: "Ingles Supermarket", address: "1865 Hendersonville Rd", city: "Asheville" },
+  { name: "Ingles Supermarket", address: "863 Brevard Rd", city: "Asheville" },
+  { name: "Target", address: "115 River Hills Rd", city: "Asheville" },
+  { name: "Ingles Supermarket", address: "29 Tunnel Rd", city: "Asheville" },
+  { name: "Harris Teeter", address: "136 Merrimon Ave", city: "Asheville" },
+  { name: "Speedway", address: "648 Hendersonville Rd", city: "Asheville" },
+  { name: "Ingles Supermarket", address: "780 Hendersonville Rd", city: "Asheville" },
+  { name: "Publix Super Market", address: "1830 Hendersonville Rd", city: "Asheville" },
+  { name: "Ingles Supermarket", address: "2901 Hendersonville Rd", city: "Fletcher" },
+  { name: "Target", address: "15 Mckenna Rd", city: "Arden" },
+  { name: "Ingles Supermarket", address: "6400 Brevard Rd", city: "Etowah" },
+  { name: "Ingles Supermarket", address: "1705 Brevard Rd", city: "Hendersonville" },
+  { name: "Sav Mor Foods", address: "1047 Fleming St", city: "Hendersonville" },
+  { name: "Ingles Supermarket", address: "1980 Asheville Hwy", city: "Hendersonville" },
+  { name: "Ingles Supermarket", address: "301 Long Shoals Rd", city: "Arden" },
+  { name: "Ingles Supermarket", address: "220 N Highland Lake Rd", city: "Flat Rock" },
+  { name: "Harris Teeter", address: "636 Spartanburg Hwy", city: "Hendersonville" },
+  { name: "Publix Super Market", address: "635 Greenville Hwy", city: "Hendersonville" },
+  { name: "Ingles Supermarket", address: "276 NC 9 Hwy", city: "Lake Lure" },
+  { name: "Ingles Supermarket", address: "3643 Howard Gap Rd", city: "Hendersonville" },
+  { name: "Speedway", address: "Spartanburg Hwy", city: "Hendersonville" },
+  { name: "Ingles Supermarket", address: "7 Leicester Hwy", city: "Asheville" },
+  { name: "Ingles Supermarket", address: "2575 New Leicester Hwy", city: "Asheville" },
+  { name: "Ingles Supermarket", address: "1572 Sand Hill Rd", city: "Candler" },
+  { name: "Target", address: "15 Mckenna Rd", city: "Arden" },
+  { name: "Ingles Supermarket", address: "669 Haywood Rd", city: "Asheville" },
+  { name: "Ingles Supermarket", address: "153 Smokey Park Hwy", city: "Asheville" },
+  { name: "Ingles Supermarket", address: "1141 Tunnel Rd", city: "Asheville" },
+  { name: "Food Lion", address: "1350 Charlotte Hwy", city: "Fairview" },
+  { name: "Target", address: "115 River Hills Rd", city: "Asheville" },
+  { name: "Sav Mor Foods", address: "891 Patton Ave", city: "Asheville" },
+  { name: "Ingles Supermarket", address: "225 Charlotte Hwy", city: "Asheville" }
+];
+
+// Group the store list by store name
+const groupedStores = {};
+storeList.forEach(store => {
+  if (!groupedStores[store.name]) {
+    groupedStores[store.name] = [];
+  }
+  groupedStores[store.name].push(store);
+});
+
+// Sort each group by city then address
+for (const name in groupedStores) {
+  groupedStores[name].sort((a, b) => {
+    if (a.city === b.city) {
+      return a.address.localeCompare(b.address);
+    }
+    return a.city.localeCompare(b.city);
+  });
+}
+
+// Get sorted store names
+const storeNamesSorted = Object.keys(groupedStores).sort((a, b) => a.localeCompare(b));
+
+// Populate the select elements using optgroups
+const startLocationSelect = document.getElementById("startLocation");
+const endLocationSelect   = document.getElementById("endLocation");
+
+storeNamesSorted.forEach(storeName => {
+  // Create optgroup for this store name
+  const optgroupStart = document.createElement("optgroup");
+  optgroupStart.label = storeName;
+  const optgroupEnd = document.createElement("optgroup");
+  optgroupEnd.label = storeName;
+  
+  groupedStores[storeName].forEach(store => {
+    // Include store name in the option text along with address and city.
+    const optionText = `${storeName} - ${store.address}, ${store.city}`;
+    
+    const optStart = document.createElement("option");
+    optStart.value = optionText;
+    optStart.textContent = optionText;
+    optgroupStart.appendChild(optStart);
+    
+    const optEnd = document.createElement("option");
+    optEnd.value = optionText;
+    optEnd.textContent = optionText;
+    optgroupEnd.appendChild(optEnd);
+  });
+  startLocationSelect.appendChild(optgroupStart);
+  endLocationSelect.appendChild(optgroupEnd);
+});
+
+/* 
+   =========================================
+   TIMER & LOGIC HANDLING
+   =========================================
+*/
+
+let timerInterval = null;
+let startTime = null;
+
+// Local Storage key for logs
+const LOGS_KEY = "driveTimeLogs";
+
+/**
+ * formatTimeWithSeconds(ms)
+ *   Convert elapsed time in ms to HH:MM:SS format for the visible timer.
+ */
+function formatTimeWithSeconds(ms) {
+  let totalSeconds = Math.floor(ms / 1000);
+  let hours = Math.floor(totalSeconds / 3600);
+  let minutes = Math.floor((totalSeconds % 3600) / 60);
+  let seconds = totalSeconds % 60;
+  return (
+    String(hours).padStart(2, "0") + ":" +
+    String(minutes).padStart(2, "0") + ":" +
+    String(seconds).padStart(2, "0")
+  );
+}
+
+/**
+ * startDrive() - Triggered when user clicks "Start".
+ *   - Saves the current time.
+ *   - Begins updating the visible timer (with seconds).
+ */
+function startDrive() {
+  if (timerInterval !== null) return;
+  startTime = new Date();
+  timerInterval = setInterval(() => {
+    const now = new Date();
+    const elapsedMs = now - startTime;
+    document.getElementById("timerDisplay").textContent = formatTimeWithSeconds(elapsedMs);
+  }, 1000);
+}
+
+/**
+ * endDrive() - Triggered when user clicks "End".
+ *   - Stops the timer.
+ *   - Calculates the drive duration in minutes (seconds not shown in log).
+ *   - Saves an entry to local storage with current date, locations, times and duration.
+ */
+function endDrive() {
+  if (timerInterval === null) return;
+  clearInterval(timerInterval);
+  timerInterval = null;
+  const endTime = new Date();
+  const elapsedMs = endTime - startTime;
+  const minutes = Math.floor(elapsedMs / 60000);
+  const durationFormatted = minutes + " min";
+
+  const entry = {
+    date: new Date().toLocaleDateString(),
+    startLocation: startLocationSelect.value,
+    endLocation: endLocationSelect.value,
+    startTime: startTime.toLocaleTimeString(),
+    endTime: endTime.toLocaleTimeString(),
+    duration: durationFormatted,
+    minutes: minutes
+  };
+
+  const logs = getLogs();
+  logs.push(entry);
+  localStorage.setItem(LOGS_KEY, JSON.stringify(logs));
+  startTime = null;
+  renderLogs();
+}
+
+/* 
+   =========================================
+   LOGS & UI HANDLING
+   =========================================
+*/
+
+/**
+ * getLogs() - Retrieves log entries from local storage.
+ */
+function getLogs() {
+  const logsJson = localStorage.getItem(LOGS_KEY);
+  return logsJson ? JSON.parse(logsJson) : [];
+}
+
+/**
+ * renderLogs() - Renders logs grouped by date, showing total minutes and stops per day.
+ */
+function renderLogs() {
+  const container = document.getElementById("logsContainer");
+  const logs = getLogs();
+  const grouped = {};
+  logs.forEach(log => {
+    if (!grouped[log.date]) grouped[log.date] = [];
+    grouped[log.date].push(log);
+  });
+
+  let html = "";
+  const dates = Object.keys(grouped).sort((a, b) => new Date(a) - new Date(b));
+  dates.forEach(date => {
+    let totalMinutes = 0;
+    grouped[date].forEach(item => totalMinutes += item.minutes);
+    
+    html += `<div class="date-section">`;
+    html += `<h3>${date} &mdash; Total: ${totalMinutes} min | Stops: ${grouped[date].length}</h3>`;
+    html += `<table>
+      <thead>
+        <tr>
+          <th>Start Location</th>
+          <th>End Location</th>
+          <th>Start Time</th>
+          <th>End Time</th>
+          <th>Duration</th>
+        </tr>
+      </thead>
+      <tbody>`;
+    grouped[date].forEach(item => {
+      html += `<tr>
+        <td>${item.startLocation}</td>
+        <td>${item.endLocation}</td>
+        <td>${item.startTime}</td>
+        <td>${item.endTime}</td>
+        <td>${item.duration}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>`;
+  });
+  container.innerHTML = html;
+}
+
+/**
+ * toggleLogs() - Shows or hides the logs container.
+ */
+function toggleLogs() {
+  const container = document.getElementById("logsContainer");
+  if (container.style.display === "block") {
+    container.style.display = "none";
+  } else {
+    renderLogs();
+    container.style.display = "block";
+  }
+}
+
+/**
+ * downloadLogs() - Exports logs as a CSV file with the current date appended to the filename.
+ */
+function downloadLogs() {
+  const logs = getLogs();
+  if (logs.length === 0) {
+    alert("No logs to download.");
+    return;
+  }
+  let csv = "Date,Start Location,End Location,Start Time,End Time,Duration\n";
+  logs.forEach(log => {
+    csv += `"${log.date}","${log.startLocation}","${log.endLocation}","${log.startTime}","${log.endTime}","${log.duration}"\n`;
+  });
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const currentDate = new Date().toISOString().split('T')[0];
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `drive_time_log_${currentDate}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * resetLogs() - Clears all logs and stops any active timer.
+ */
+function resetLogs() {
+  if (!confirm("Are you sure you want to reset all drive logs?")) return;
+  localStorage.removeItem(LOGS_KEY);
+  document.getElementById("logsContainer").innerHTML = "";
+  if (timerInterval !== null) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  startTime = null;
+}
+</script>
+
+</body>
+</html>
