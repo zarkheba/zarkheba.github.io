@@ -337,16 +337,20 @@
       renderLogs();
       logsContainer.style.display = logsContainer.style.display === 'none' ? 'block' : 'none';
     };
-    downloadBtn.onclick = () => {
-      downloadCSV(logs, 'drive_logs.csv', ['date','from','to','minutes','tripStart','tripEnd']);
-    };
+downloadBtn.onclick = () => {
+  const dateStr = new Date().toISOString().slice(0,10);        // “YYYY-MM-DD”
+  downloadCSV(logs, `drive_logs_${dateStr}.csv`, 
+              ['date','from','to','minutes','tripStart','tripEnd']);
+};
     detourBtn.onclick = () => {
       renderDetours();
       detourContainer.style.display = detourContainer.style.display === 'none' ? 'block' : 'none';
     };
-    downloadDetourBtn.onclick = () => {
-      downloadCSV(detours, 'detours.csv', ['date','reason','seconds','pauseStart','pauseEnd']);
-    };
+downloadDetourBtn.onclick = () => {
+  const dateStr = new Date().toISOString().slice(0,10);
+  downloadCSV(detours, `detours_${dateStr}.csv`,
+              ['date','reason','seconds','pauseStart','pauseEnd']);
+};
     resetBtn.onclick = () => {
       if (confirm('Reset all data?')) {
         localStorage.clear();
