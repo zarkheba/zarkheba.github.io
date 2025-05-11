@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Drive Time Logger Extended</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; color: #333; padding: 10px; }
+    .container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+    h1 { text-align: center; margin-bottom: 1em; }
+    .selectors, .actions { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1em; }
+    select, button { padding: 10px; font-size: 1rem; border-radius: 4px; border: 1px solid #ccc; width: 100%; }
+    button { background: #007BFF; color: #fff; cursor: pointer; }
+    button:hover { background: #0056b3; }
+    #timerDisplay { text-align: center; font-weight: bold; font-size: 1.2rem; margin: 1em 0; padding: 10px; border: 2px solid #007BFF; border-radius: 4px; }
+    #logsContainer, #detourContainer { display: none; margin-top: 1em; max-height: 300px; overflow-y: auto; background: #fafafa; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1em; }
+    th, td { padding: 6px; border: 1px solid #ccc; text-align: left; }
+    .modal-backdrop { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); display:none; justify-content:center; align-items:center; }
+    .modal { background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; }
+    @media (orientation: landscape) { .container { max-width: 95%; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Drive Time Logger</h1>
+    <div class="selectors">
+      <select id="weekDaySelect"></select>
+      <select id="currentSelect"></select>
+      <select id="nextSelect"></select>
+    </div>
+    <div class="actions">
+      <button id="startBtn">Start</button>
+      <div id="timerDisplay">00:00:00</div>
+      <button id="pauseBtn">Pause</button>
+      <button id="endBtn">End Leg</button>
+      <button id="viewBtn">View Logs</button>
+      <button id="downloadBtn">Download CSV</button>
+      <button id="detourBtn">Detours</button>
+      <button id="downloadDetourBtn">Download Detours</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+    <div id="timerDisplay">00:00:00</div>
+    <div id="logsContainer"></div>
+    <div id="detourContainer"></div>
+  </div>
+
+  <div id="pauseModal" class="modal-backdrop">
+    <div class="modal">
+      <h3>Pause Reason</h3>
+      <select id="pauseReasonSelect">
+        <option>Short Pause</option>
+        <option>Lunch</option>
+        <option>Shopping</option>
+        <option>Thrifting</option>
+        <option>Siesta</option>
+      </select>
+      <div id="pauseTimer" style="text-align:center; margin:10px 0; font-size:1.2rem;">00:00</div>
+      <button id="unpauseBtn">Unpause</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+                const storeData = [
+      // Week 1 Monday
+      { week: 1, day: 'Monday', name: 'Ingles', address: '499 Weaverville Rd, Asheville' },
+      { week: 1, day: 'Monday', name: 'Publix', address: '165 Weaver Blvd, Weaverville' },
+      { week: 1, day: 'Monday', name: 'Ingles', address: '140 Weaver Blvd, Weaverville' },
+      { week: 1, day: 'Monday', name: 'Ingles', address: '225 Carl Eller Rd, Mars Hill' },
+      { week: 1, day: 'Monday', name: 'Ingles', address: '5580 US 25 Hwy, Marshall' },
+      { week: 1, day: 'Monday', name: 'Ingles', address: '915 Merrimon Ave, Asheville' },
+      { week: 1, day: 'Monday', name: 'Sav Mor', address: '842 Merrimon Ave, Asheville' },
+      // Week 1 Tuesday
+      { week: 1, day: 'Tuesday', name: 'Sav Mor', address: '83 Plaza Loop, Canton' },
+      { week: 1, day: 'Tuesday', name: 'Ingles', address: '1678 Brown Ave Ste 1, Waynesville' },
+      { week: 1, day: 'Tuesday', name: 'Publix', address: '124 Frazier St, Waynesville' },
+      { week: 1, day: 'Tuesday', name: 'Ingles', address: '259 Barber Blvd, Waynesville' },
+      { week: 1, day: 'Tuesday', name: 'Food Lion', address: '179 Paragon Pkwy, Clyde' },
+      // Week 1 Wednesday
+      { week: 1, day: 'Wednesday', name: 'Harris Teeter', address: '136 Merrimon Ave, Asheville' },
+      { week: 1, day: 'Wednesday', name: 'Ingles', address: '1572 Sand Hill Rd, Candler' },
+      // Week 1 Thursday
+      { week: 1, day: 'Thursday', name: 'Ingles', address: '29 Tunnel Rd, Asheville' },
+      { week: 1, day: 'Thursday', name: 'Target', address: '115 River Hills Rd, Asheville' },
+      // Week 1 Friday
+      { week: 1, day: 'Friday', name: 'Target', address: '15 Mckenna Rd, Arden' },
+      { week: 1, day: 'Friday', name: 'Ingles', address: '2901 Hendersonville Rd, Fletcher' },
+      { week: 1, day: 'Friday', name: 'Ingles', address: '1865 Hendersonville Rd, Asheville' },
+      { week: 1, day: 'Friday', name: 'Publix', address: '1830 Hendersonville Rd, Asheville' },
+      { week: 1, day: 'Friday', name: 'Ingles', address: '780 Hendersonville Rd, Asheville' },
+      { week: 1, day: 'Friday', name: 'Speedway', address: '648 Hendersonville Rd, Asheville' },
+      // Week 2 Monday
+      { week: 2, day: 'Monday', name: 'Ingles', address: '3338 Boylston Hwy, Mills River' },
+      { week: 2, day: 'Monday', name: 'Ingles', address: '6400 Brevard Rd, Etowah' },
+      { week: 2, day: 'Monday', name: 'Ingles', address: '1705 Brevard Rd, Hendersonville' },
+      { week: 2, day: 'Monday', name: 'Sav Mor', address: '1047 Fleming St, Hendersonville' },
+      { week: 2, day: 'Monday', name: 'Ingles', address: '1980 Asheville Hwy, Hendersonville' },
+      { week: 2, day: 'Monday', name: 'Ingles', address: '669 Haywood Rd, Asheville' },
+      // Week 2 Tuesday
+      { week: 2, day: 'Tuesday', name: 'Ingles', address: '301 Long Shoals Rd, Arden' },
+      { week: 2, day: 'Tuesday', name: 'Publix', address: '635 Greenville Hwy, Hendersonville' },
+      { week: 2, day: 'Tuesday', name: 'Speedway', address: 'Spartanburg Hwy, Hendersonville' },
+      { week: 2, day: 'Tuesday', name: 'Harris Teeter', address: '636 Spartanburg Hwy, Hendersonville' },
+      { week: 2, day: 'Tuesday', name: 'Ingles', address: '220 N Highland Lake Rd, Flat Rock' },
+      { week: 2, day: 'Tuesday', name: 'Ingles', address: '276 NC 9 Hwy, Lake Lure' },
+      { week: 2, day: 'Tuesday', name: 'Ingles', address: '3643 Howard Gap Rd, Hendersonville' },
+      { week: 2, day: 'Tuesday', name: 'Ingles', address: '153 Smokey Park Hwy, Asheville' },
+      // Week 2 Wednesday
+      { week: 2, day: 'Wednesday', name: 'Ingles', address: '7 Leicester Hwy, Asheville' },
+      { week: 2, day: 'Wednesday', name: 'Ingles', address: '2575 New Leicester Hwy, Asheville' },
+      // Week 2 Thursday
+      { week: 2, day: 'Thursday', name: 'Target', address: '15 Mckenna Rd, Arden' },
+      { week: 2, day: 'Thursday', name: 'Sav Mor', address: '891 Patton Ave, Asheville' },
+      // Week 2 Friday
+      { week: 2, day: 'Friday', name: 'Target', address: '115 River Hills Rd, Asheville' },
+      { week: 2, day: 'Friday', name: 'Food Lion', address: '1350 Charlotte Hwy, Fairview' },
+      { week: 2, day: 'Friday', name: 'Ingles', address: '225 Charlotte Hwy, Asheville' },
+      { week: 2, day: 'Friday', name: 'Ingles', address: '1141 Tunnel Rd, Asheville' }
+    ];
+    const mapping = {};
+    storeData.forEach((s,i) => {
+      const key = `Week ${s.week} - ${s.day}`;
+      (mapping[key] = mapping[key] || []).push({ ...s, index: i });
+    });
+
+    // DOM elements
+    const weekDaySelect = document.getElementById('weekDaySelect');
+    const currentSelect = document.getElementById('currentSelect');
+    const nextSelect = document.getElementById('nextSelect');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const endBtn = document.getElementById('endBtn');
+    const viewBtn = document.getElementById('viewBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const detourBtn = document.getElementById('detourBtn');
+    const downloadDetourBtn = document.getElementById('downloadDetourBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const logsContainer = document.getElementById('logsContainer');
+    const detourContainer = document.getElementById('detourContainer');
+    const pauseModal = document.getElementById('pauseModal');
+    const pauseReasonSelect = document.getElementById('pauseReasonSelect');
+    const pauseTimerDisplay = document.getElementById('pauseTimer');
+    const unpauseBtn = document.getElementById('unpauseBtn');
+
+    // State
+    const STATE_KEY = 'activeTrip';
+    const LOGS_KEY = 'logs';
+    const DETOURS_KEY = 'detours';
+    let state = JSON.parse(localStorage.getItem(STATE_KEY)) || {
+      active: false,
+      isPaused: false,
+      weekDay: null,
+      currentIdx: 0,
+      startTime: null,
+      pausedTime: 0,
+      pauseStart: null,
+      tripStart: null,
+      tripEnd: null
+    };
+    let logs = JSON.parse(localStorage.getItem(LOGS_KEY)) || [];
+    let detours = JSON.parse(localStorage.getItem(DETOURS_KEY)) || [];
+
+    function saveState() { localStorage.setItem(STATE_KEY, JSON.stringify(state)); }
+    function saveLogs() { localStorage.setItem(LOGS_KEY, JSON.stringify(logs)); }
+    function saveDetours() { localStorage.setItem(DETOURS_KEY, JSON.stringify(detours)); }
+    function roundTo30Secs(sec) { return Math.round(sec / 30) * 30; }
+
+    // Populate selectors
+    Object.keys(mapping).forEach(k => weekDaySelect.add(new Option(k, k)));
+    if (state.weekDay) weekDaySelect.value = state.weekDay;
+    weekDaySelect.onchange = () => {
+      state.weekDay = weekDaySelect.value;
+      state.currentIdx = 0;
+      saveState();
+      populateStops();
+      renderAll();
+    };
+
+function populateStops() {
+  // 1) route-specific stops in their original order
+  const routeStops = mapping[state.weekDay] || [];
+
+  // 2) capture their original storeData indices
+  const routeIndices = new Set(routeStops.map(s => s.index));
+
+  // 3) build the rest of the stores (full list), preserving storeData order
+  const otherStops = storeData
+    .map((s, i) => ({ ...s, index: i }))
+    .filter(s => !routeIndices.has(s.index));
+
+  // 4) merged list: today's route first, then all others
+  const stops = [...routeStops, ...otherStops];
+
+  // repopulate both dropdowns
+  currentSelect.innerHTML = '';
+  nextSelect.innerHTML = '';
+  stops.forEach((s, i) => {
+    const text = `${s.name} — ${s.address}`;
+    currentSelect.add(new Option(text, i));
+    nextSelect.add(new Option(text, i));
+  });
+
+  // restore the previously selected “current” and recalc the “next”
+  currentSelect.selectedIndex = state.currentIdx;
+  updateNext();
+}
+
+    // Main timer (HH:MM:SS)
+    function startMainTimer() {
+      function tick() {
+        const elapsed = Date.now() - new Date(state.startTime) - state.pausedTime;
+        const d = new Date(elapsed);
+        const hh = String(d.getUTCHours()).padStart(2, '0');
+        const mm = String(d.getUTCMinutes()).padStart(2, '0');
+        const ss = String(d.getUTCSeconds()).padStart(2, '0');
+        timerDisplay.textContent = `${hh}:${mm}:${ss}`;
+      }
+      state.mainInterval = setInterval(tick, 1000);
+      tick();
+    }
+    function resumeTimersOnLoad() {
+      if (state.active) {
+        if (state.isPaused) {
+          showPauseModal();
+          startPauseTimer();
+          pauseBtn.disabled = true;
+        } else {
+          startMainTimer();
+          pauseBtn.disabled = false;
+          pauseBtn.textContent = 'Pause';
+        }
+      }
+    }
+
+    startBtn.onclick = () => {
+      if (!state.active) {
+        state.startTime = new Date().toISOString();
+        state.pausedTime = 0;
+        state.active = true;
+        state.isPaused = false;
+        state.tripStart = new Date().toISOString();
+        saveState();
+        startMainTimer();
+      }
+    };
+
+    // Pause timer (HH:MM only)
+    function startPauseTimer() {
+      if (!state.pauseStart) state.pauseStart = new Date().toISOString();
+      saveState();
+      state.pauseInterval = setInterval(() => {
+        const acc = Date.now() - new Date(state.pauseStart);
+        const d = new Date(acc);
+        const hh = String(d.getUTCHours()).padStart(2, '0');
+        const mm = String(d.getUTCMinutes()).padStart(2, '0');
+        pauseTimerDisplay.textContent = `${hh}:${mm}`;
+      }, 1000);
+    }
+
+    pauseBtn.onclick = () => {
+      if (state.active && !state.isPaused) {
+        clearInterval(state.mainInterval);
+        state.isPaused = true;
+        saveState();
+        showPauseModal();
+        startPauseTimer();
+        pauseBtn.disabled = true;
+      }
+    };
+    function showPauseModal() { pauseModal.style.display = 'flex'; }
+    function hidePauseModal() { clearInterval(state.pauseInterval); pauseModal.style.display = 'none'; }
+
+    unpauseBtn.onclick = () => {
+      hidePauseModal();
+      const acc = Date.now() - new Date(state.pauseStart);
+      state.pausedTime += acc;
+      state.isPaused = false;
+      state.pauseEnd = new Date().toISOString();
+      const rounded = roundTo30Secs(Math.round(acc / 1000));
+      detours.push({
+        date: new Date().toLocaleDateString(),
+        reason: pauseReasonSelect.value,
+        seconds: rounded,
+        pauseStart: state.pauseStart,
+        pauseEnd: state.pauseEnd
+      });
+      state.pauseStart = null;
+      saveDetours();
+      saveState();
+      startMainTimer();
+      pauseBtn.disabled = false;
+      pauseBtn.textContent = 'Pause';
+    };
+
+    endBtn.onclick = () => {
+      if (state.active) {
+        clearInterval(state.mainInterval);
+        state.active = false;
+        state.tripEnd = new Date().toISOString();
+        saveState();
+        const totalMs = Date.now() - new Date(state.startTime) - state.pausedTime;
+        const mins = Math.round(roundTo30Secs(Math.round(totalMs / 1000)) / 60);
+        logs.push({
+          date: new Date().toLocaleDateString(),
+          from: currentSelect.options[currentSelect.selectedIndex].text,
+          to: nextSelect.options[nextSelect.selectedIndex].text,
+          minutes: mins,
+          tripStart: state.tripStart.slice(11,16),
+          tripEnd: state.tripEnd.slice(11,16)
+        });
+        saveLogs();
+        // Reset state
+        state.currentIdx = state.nextIdx;
+        state.active = false;
+        state.isPaused = false;
+        state.startTime = null;
+        state.pausedTime = 0;
+        state.pauseStart = null;
+        state.tripStart = null;
+        state.tripEnd = null;
+        saveState();
+        populateStops();
+        renderAll();
+        timerDisplay.textContent = '00:00:00';
+      }
+    };
+
+    viewBtn.onclick = () => { renderLogs(); logsContainer.style.display = logsContainer.style.display === 'none' ? 'block' : 'none'; };
+    downloadBtn.onclick = () => { downloadCSV(logs, 'drive_logs.csv', ['date','from','to','minutes','tripStart','tripEnd']); };
+    detourBtn.onclick = () => { renderDetours(); detourContainer.style.display = detourContainer.style.display === 'none' ? 'block' : 'none'; };
+    downloadDetourBtn.onclick = () => { downloadCSV(detours, 'detours.csv', ['date','reason','seconds','pauseStart','pauseEnd']); };
+    resetBtn.onclick = () => { if (confirm('Reset all data?')) { localStorage.clear(); location.reload(); } };
+
+    function downloadCSV(arr, filename, fields) {
+      if (!arr.length) return;
+      const csv = [fields.join(','), ...arr.map(o => fields.map(f => `"${o[f]}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function renderLogs() {
+      logsContainer.innerHTML = '';
+      const grouped = {};
+      logs.forEach(e => (grouped[e.date] = grouped[e.date] || []).push(e));
+      Object.keys(grouped).forEach(date => {
+        const ent = grouped[date];
+        const total = ent.reduce((a,b) => a + b.minutes, 0);
+        const tbl = document.createElement('table');
+        tbl.innerHTML = `<thead><tr><th colspan="5">${date} — Total: ${total} min</th></tr><tr><th>From</th><th>To</th><th>Duration</th><th>Start</th><th>End</th></tr></thead>`;
+        const tb = tbl.createTBody();
+        ent.forEach(e => {
+          const r = tb.insertRow();
+          r.insertCell().textContent = e.from;
+          r.insertCell().textContent = e.to;
+          r.insertCell().textContent = `${e.minutes} min`;
+          r.insertCell().textContent = e.tripStart;
+          r.insertCell().textContent = e.tripEnd;
+        });
+        logsContainer.appendChild(tbl);
+      });
+    }
+
+    function renderDetours() {
+      detourContainer.innerHTML = '';
+      const grouped = {};
+      detours.forEach(e => (grouped[e.date] = grouped[e.date] || []).push(e));
+      Object.keys(grouped).forEach(date => {
+        const ent = grouped[date];
+        const totalSec = ent.reduce((a,b) => a + b.seconds, 0);
+        const tbl = document.createElement('table');
+        tbl.innerHTML = `<thead><tr><th colspan="4">${date} — Total: ${Math.round(totalSec/60)} min</th></tr><tr><th>Reason</th><th>Duration</th><th>Start</th><th>End</th></tr></thead>`;
+        const tb = tbl.createTBody();
+        ent.forEach(e => {
+          const r = tb.insertRow();
+          r.insertCell().textContent = e.reason;
+          r.insertCell().textContent = `${Math.round(e.seconds/60)} min`;
+          r.insertCell().textContent = e.pauseStart.slice(11,16);
+          r.insertCell().textContent = e.pauseEnd.slice(11,16);
+        });
+        detourContainer.appendChild(tbl);
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (!state.weekDay) state.weekDay = Object.keys(mapping)[0];
+      weekDaySelect.value = state.weekDay;
+      populateStops();
+      renderAll();
+      resumeTimersOnLoad();
+    });
+
+    // Helpers
+    function renderAll() { renderLogs(); renderDetours(); }
+  </script>
+</body>
+</html>
