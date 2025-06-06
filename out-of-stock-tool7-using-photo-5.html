@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Planogram: Draw & Highlight Blocks</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #buttonBar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #ccc;
+      justify-content: flex-end;
+      z-index: 30;
+    }
+    .btn {
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      background: #007AFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #container {
+      position: relative;
+      flex: 1;
+      overflow: auto;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    /* Wrapper around image + overlays */
+    #imgWrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+      max-width: 100%;
+    }
+    /* Planogram image: slightly faded for contrast */
+    #planogramImg {
+      width: 100%;
+      height: auto;
+      display: block;
+      opacity: 0.8;
+    }
+    /* Canvas for drawing sits exactly over the wrapper */
+    #drawCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;     /* Prevent default scroll‐zoom while drawing */
+      pointer-events: none;    /* Only enabled during Draw Mode */
+      z-index: 10;
+    }
+    /* Permanent overlay cells (once drawn) */
+    .overlay-cell {
+      position: absolute;
+      border: 2px solid rgba(0, 0, 0, 0.3);
+      border-radius: 6px;
+      background: rgba(224, 224, 224, 0.6);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #000;
+      transition: background 0.2s, border-color 0.2s;
+      user-select: none;
+      touch-action: auto;     /* Allow scrolling when touch on cell */
+      z-index: 20;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .overlay-cell.orange { background: rgba(255, 165, 0, 0.7); border-color: #cc8400; }
+    .overlay-cell.red    { background: rgba(255, 0, 0, 0.6);   border-color: #b30000; }
+    .overlay-cell.green  { background: rgba(0, 128, 0, 0.6);   border-color: #006600; }
+
+    /* “×” delete button in top-right corner of block */
+    .delete-btn {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      line-height: 18px;
+      text-align: center;
+      cursor: pointer;
+      z-index: 25;
+    }
+
+    /* Description text: one line, ellipsis if too long */
+    .desc-text {
+      width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #000;
+    }
+    .overlay-cell.highlighted .desc-text {
+      color: #fff; /* White text on highlight */
+    }
+
+    /* List view covering entire container */
+    #listContainer {
+      display: none;
+      overflow-y: auto;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: white;
+      z-index: 30;
+    }
+    #itemList {
+      list-style: none;
+      margin: 0;
+      padding: 8px;
+    }
+    #itemList li {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      font-size: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="buttonBar">
+    <button id="enterDrawModeBtn" class="btn">Draw New Block</button>
+    <button id="toggleListBtn" class="btn">View List</button>
+    <button id="clearAllBtn" class="btn">Clear All Highlights</button>
+    <button id="hidePhotoBtn" class="btn">Hide Photo</button>
+    <button id="saveTemplateBtn" class="btn">Save Template</button>
+    <button id="loadTemplateBtn" class="btn">Load Template</button>
+  </div>
+
+  <div id="container">
+    <div id="imgWrapper">
+      <img id="planogramImg" src="IMG_6047.jpg" alt="Planogram photo">
+      <canvas id="drawCanvas"></canvas>
+    </div>
+    <div id="listContainer">
+      <ul id="itemList"></ul>
+    </div>
+  </div>
+
+  <script>
+    /*****************************************************
+     * 1) STATE & STORAGE
+     *****************************************************/
+    const STORAGE_KEY = "planogramDrawData";
+    const TEMPLATES_KEY = "planogramTemplates";
+    // state.blocks = [
+    //   { id: "blk123",
+    //     topPct: 12.3, leftPct:  8.7,
+    //     widthPct: 15.0, heightPct: 20.4,
+    //     desc: "Twinkies", upc: "123456789012",
+    //     highlight: 0
+    //   }, …
+    // ]
+    let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { blocks: [] };
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    /*****************************************************
+     * 2) ELEMENT REFS & INITIAL SETUP
+     *****************************************************/
+    const container       = document.getElementById("container");
+    const wrapper         = document.getElementById("imgWrapper");
+    const imgEl           = document.getElementById("planogramImg");
+    const drawCanvas      = document.getElementById("drawCanvas");
+    const ctx             = drawCanvas.getContext("2d");
+    const listCont        = document.getElementById("listContainer");
+    const itemList        = document.getElementById("itemList");
+    const toggleListBtn   = document.getElementById("toggleListBtn");
+    const enterDrawBtn    = document.getElementById("enterDrawModeBtn");
+    const clearAllBtn     = document.getElementById("clearAllBtn");
+    const hidePhotoBtn    = document.getElementById("hidePhotoBtn");
+    const saveTemplateBtn = document.getElementById("saveTemplateBtn");
+    const loadTemplateBtn = document.getElementById("loadTemplateBtn");
+
+    // After image loads, size the canvas and render blocks/list
+    imgEl.addEventListener("load", () => {
+      resizeCanvasToWrapper();
+      renderAllBlocks();
+      rebuildList();
+    });
+    window.addEventListener("resize", () => {
+      if (imgEl.complete) {
+        resizeCanvasToWrapper();
+        renderAllBlocks();
+      }
+    });
+
+    function resizeCanvasToWrapper() {
+      const w = wrapper.clientWidth, h = wrapper.clientHeight;
+      drawCanvas.width  = w;
+      drawCanvas.height = h;
+      drawCanvas.style.width  = w + "px";
+      drawCanvas.style.height = h + "px";
+      drawCanvas.style.top    = "0";
+      drawCanvas.style.left   = "0";
+    }
+
+    /*****************************************************
+     * 3) “Draw New Block” MODE (CLICK & DRAG)
+     *****************************************************/
+    let drawing = false;
+    let startX = 0, startY = 0;
+
+    function toPercentCoords(clientX, clientY) {
+      const rect = wrapper.getBoundingClientRect();
+      const pxX = clientX - rect.left;
+      const pxY = clientY - rect.top;
+      return [
+        (pxY / rect.height) * 100, // topPct
+        (pxX / rect.width)  * 100  // leftPct
+      ];
+    }
+
+    enterDrawBtn.addEventListener("click", () => {
+      alert("Drag on the image to draw a new block. Release to finalize.");
+      drawCanvas.style.pointerEvents = "auto";
+      drawCanvas.addEventListener("mousedown", startDraw);
+      drawCanvas.addEventListener("touchstart", startDraw, { passive: false });
+    });
+
+    function startDraw(e) {
+      e.preventDefault();
+      drawing = true;
+      const pt = e.touches ? e.touches[0] : e;
+      startX = pt.clientX;
+      startY = pt.clientY;
+      drawCanvas.addEventListener("mousemove", drawRect);
+      drawCanvas.addEventListener("touchmove", drawRect, { passive: false });
+      drawCanvas.addEventListener("mouseup", endDraw);
+      drawCanvas.addEventListener("touchend", endDraw);
+    }
+
+    function drawRect(e) {
+      if (!drawing) return;
+      e.preventDefault();
+      const pt = e.touches ? e.touches[0] : e;
+      const currX = pt.clientX, currY = pt.clientY;
+      const rect = wrapper.getBoundingClientRect();
+      const x0 = Math.min(startX, currX) - rect.left;
+      const y0 = Math.min(startY, currY) - rect.top;
+      const boxW = Math.abs(currX - startX);
+      const boxH = Math.abs(currY - startY);
+
+      ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+      ctx.fillStyle   = "rgba(224,224,224, 0.4)";
+      ctx.strokeStyle = "rgba(0,0,0, 0.3)";
+      ctx.lineWidth   = 2;
+      ctx.fillRect(x0, y0, boxW, boxH);
+      ctx.strokeRect(x0, y0, boxW, boxH);
+    }
+
+    function endDraw(e) {
+      if (!drawing) return;
+      drawing = false;
+      drawCanvas.removeEventListener("mousemove", drawRect);
+      drawCanvas.removeEventListener("touchmove", drawRect);
+      drawCanvas.removeEventListener("mouseup", endDraw);
+      drawCanvas.removeEventListener("touchend", endDraw);
+
+      const pt = e.changedTouches ? e.changedTouches[0] : e;
+      const endX = pt.clientX, endY = pt.clientY;
+      const [ topPct1, leftPct1 ] = toPercentCoords(startX, startY);
+      const [ topPct2, leftPct2 ] = toPercentCoords(endX,   endY);
+      const topPct    = Math.min(topPct1, topPct2);
+      const leftPct   = Math.min(leftPct1, leftPct2);
+      const heightPct = Math.abs(topPct2 - topPct1);
+      const widthPct  = Math.abs(leftPct2 - leftPct1);
+
+      ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+
+      // Too small?
+      if (widthPct * wrapper.clientWidth < 6 || heightPct * wrapper.clientHeight < 6) {
+        alert("Box too small. Try again.");
+        exitDrawMode();
+        return;
+      }
+
+      const desc = prompt("Enter item description:").trim();
+      if (!desc) {
+        exitDrawMode();
+        return;
+      }
+      const upc = prompt("Enter UPC number:").trim();
+      if (!upc) {
+        exitDrawMode();
+        return;
+      }
+
+      // Save new block
+      const newBlock = {
+        id: "blk" + Date.now(),
+        topPct, leftPct, widthPct, heightPct,
+        desc, upc,
+        highlight: 0
+      };
+      state.blocks.push(newBlock);
+      saveState();
+      exitDrawMode();
+      renderAllBlocks();
+      rebuildList();
+    }
+
+    function exitDrawMode() {
+      drawCanvas.style.pointerEvents = "none";
+      drawCanvas.removeEventListener("mousedown", startDraw);
+      drawCanvas.removeEventListener("touchstart", startDraw);
+      ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    }
+
+    /*****************************************************
+     * 4) RENDER ALL SAVED BLOCKS (PERMANENT OVERLAYS)
+     *****************************************************/
+    function renderAllBlocks() {
+      // Remove existing overlays:
+      wrapper.querySelectorAll(".overlay-cell").forEach(el => el.remove());
+
+      const w = wrapper.clientWidth, h = wrapper.clientHeight;
+      state.blocks.forEach(b => {
+        const pxTop    = (b.topPct    / 100) * h;
+        const pxLeft   = (b.leftPct   / 100) * w;
+        const pxHeight = (b.heightPct / 100) * h;
+        const pxWidth  = (b.widthPct  / 100) * w;
+
+        const cell = document.createElement("div");
+        cell.className = "overlay-cell";
+        cell.dataset.id = b.id;
+        cell.style.top    = pxTop    + "px";
+        cell.style.left   = pxLeft   + "px";
+        cell.style.width  = pxWidth  + "px";
+        cell.style.height = pxHeight + "px";
+
+        // Description text
+        const descDiv = document.createElement("div");
+        descDiv.className = "desc-text";
+        descDiv.textContent = b.desc;
+        if (b.highlight > 0) {
+          cell.classList.add("highlighted");
+        }
+        cell.appendChild(descDiv);
+
+        // Delete “×” button
+        const delBtn = document.createElement("div");
+        delBtn.className = "delete-btn";
+        delBtn.innerHTML = "&times;";
+        delBtn.addEventListener("click", e => {
+          e.stopPropagation();
+          if (confirm("Delete this block?")) {
+            state.blocks = state.blocks.filter(x => x.id !== b.id);
+            saveState();
+            renderAllBlocks();
+            rebuildList();
+          }
+        });
+        cell.appendChild(delBtn);
+
+        // Highlight logic on click
+        cell.addEventListener("click", () => handleBlockClick(b.id, cell));
+        wrapper.appendChild(cell);
+        applyHighlightStyle(cell, b.highlight);
+      });
+    }
+
+    function applyHighlightStyle(cell, hl) {
+      cell.classList.remove("orange", "red", "green", "highlighted");
+      if (hl === 1) {
+        cell.classList.add("orange", "highlighted");
+      } else if (hl === 2) {
+        cell.classList.add("red", "highlighted");
+      } else if (hl === 3) {
+        cell.classList.add("green", "highlighted");
+      }
+      // If highlighted, make text white
+      if (hl > 0) {
+        cell.querySelector(".desc-text").style.color = "#fff";
+      } else {
+        cell.querySelector(".desc-text").style.color = "#000";
+      }
+    }
+
+    /*****************************************************
+     * 5) HANDLE BLOCK CLICK → HIGHLIGHT CYCLE
+     *****************************************************/
+    function handleBlockClick(id, cellEl) {
+      const b = state.blocks.find(x => x.id === id);
+      if (!b) return;
+
+      if (b.highlight < 2) {
+        b.highlight++;
+      } else if (b.highlight === 2) {
+        // 3rd click would be “Finished,” but we remove from list immediately
+        b.highlight = 3;
+        // Immediately remove from list (so it never shows).
+        // But keep the green highlight on the block.
+      } else {
+        // 4th click = clear highlight
+        if (!confirm("Clear this block’s highlight?")) return;
+        b.highlight = 0;
+      }
+      saveState();
+      applyHighlightStyle(cellEl, b.highlight);
+      rebuildList();
+    }
+
+    /*****************************************************
+     * 6) BUILD & DISPLAY THE LIST OF HIGHLIGHTED BLOCKS
+     *****************************************************/
+    function rebuildList() {
+      itemList.innerHTML = "";
+      state.blocks.forEach(b => {
+        if (b.highlight === 1 || b.highlight === 2) {
+          const tag = b.highlight === 1 ? "Low" : "Out";
+          const li = document.createElement("li");
+          li.textContent = `${b.desc} (UPC: ${b.upc}) — ${tag}`;
+          attachLongPress(li, b.id);
+          itemList.appendChild(li);
+        }
+      });
+    }
+
+    function attachLongPress(li, id) {
+      let timeoutId = null;
+      const start = (e) => {
+        e.preventDefault();
+        timeoutId = setTimeout(() => {
+          if (!confirm("Remove this item from list & clear its highlight?")) return;
+          const b = state.blocks.find(x => x.id === id);
+          if (b) {
+            b.highlight = 0;
+            saveState();
+            // Update the overlay block’s appearance
+            const cellEl = wrapper.querySelector(`.overlay-cell[data-id="${id}"]`);
+            if (cellEl) applyHighlightStyle(cellEl, b.highlight);
+          }
+          li.remove();
+        }, 600);
+      };
+      const cancel = () => clearTimeout(timeoutId);
+      li.addEventListener("touchstart", start);
+      li.addEventListener("touchend", cancel);
+      li.addEventListener("touchmove", cancel);
+      li.addEventListener("mousedown", start);
+      li.addEventListener("mouseup", cancel);
+      li.addEventListener("mouseleave", cancel);
+    }
+
+    /*****************************************************
+     * 7) TOGGLE “View List” ↔ “View Image”
+     *****************************************************/
+    toggleListBtn.addEventListener("click", () => {
+      const showingList = listCont.style.display === "block";
+      if (showingList) {
+        listCont.style.display = "none";
+        toggleListBtn.textContent = "View List";
+      } else {
+        rebuildList();
+        listCont.style.display = "block";
+        toggleListBtn.textContent = "View Image";
+      }
+    });
+
+    /*****************************************************
+     * 8) CLEAR ALL HIGHLIGHTS
+     *****************************************************/
+    clearAllBtn.addEventListener("click", () => {
+      if (!confirm("Are you sure you want to clear ALL highlights?")) return;
+      state.blocks.forEach(b => b.highlight = 0);
+      saveState();
+      renderAllBlocks();
+      rebuildList();
+    });
+
+    /*****************************************************
+     * 9) HIDE / SHOW PHOTO
+     *****************************************************/
+    let photoHidden = false;
+    hidePhotoBtn.addEventListener("click", () => {
+      if (!photoHidden) {
+        // Fix wrapper’s size so blocks keep position
+        const w = wrapper.clientWidth + "px";
+        const h = wrapper.clientHeight + "px";
+        wrapper.style.width  = w;
+        wrapper.style.height = h;
+        imgEl.style.display       = "none";
+        drawCanvas.style.display  = "none";
+        photoHidden = true;
+        hidePhotoBtn.textContent = "Show Photo";
+      } else {
+        // Restore responsive behavior
+        wrapper.style.width  = "";
+        wrapper.style.height = "";
+        imgEl.style.display       = "block";
+        drawCanvas.style.display  = "block";
+        photoHidden = false;
+        hidePhotoBtn.textContent = "Hide Photo";
+        resizeCanvasToWrapper();
+        renderAllBlocks();
+      }
+    });
+
+    /*****************************************************
+     * 10) SAVE AS TEMPLATE & LOAD TEMPLATE
+     *****************************************************/
+    saveTemplateBtn.addEventListener("click", () => {
+      const name = prompt("Enter a name for this template:").trim();
+      if (!name) return;
+      const allTemplates = JSON.parse(localStorage.getItem(TEMPLATES_KEY)) || {};
+      // Deep‐copy blocks array
+      allTemplates[name] = JSON.parse(JSON.stringify(state.blocks));
+      localStorage.setItem(TEMPLATES_KEY, JSON.stringify(allTemplates));
+      alert(`Template "${name}" saved.`);
+    });
+
+    loadTemplateBtn.addEventListener("click", () => {
+      const allTemplates = JSON.parse(localStorage.getItem(TEMPLATES_KEY)) || {};
+      const names = Object.keys(allTemplates);
+      if (names.length === 0) {
+        alert("No templates saved.");
+        return;
+      }
+      const choice = prompt(
+        "Available templates:\n" +
+        names.join("\n") +
+        "\n\nEnter the name to load:"
+      );
+      if (!choice || !allTemplates[choice]) {
+        alert("Template not found.");
+        return;
+      }
+      if (!confirm(`Load template "${choice}"? This will overwrite current blocks.`)) {
+        return;
+      }
+      state.blocks = JSON.parse(JSON.stringify(allTemplates[choice]));
+      saveState();
+      if (!photoHidden) {
+        resizeCanvasToWrapper();
+        renderAllBlocks();
+      } else {
+        renderAllBlocks(); // Keep wrapper size fixed
+      }
+      rebuildList();
+      alert(`Template "${choice}" loaded.`);
+    });
+
+    /*****************************************************
+     * 11) INITIALIZATION IF IMAGE ALREADY LOADED
+     *****************************************************/
+    if (imgEl.complete) {
+      resizeCanvasToWrapper();
+      renderAllBlocks();
+      rebuildList();
+    }
+  </script>
+</body>
+</html>
