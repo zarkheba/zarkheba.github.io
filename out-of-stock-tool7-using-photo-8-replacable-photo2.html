@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Planogram: Draw & Highlight Blocks with Custom Sample</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #buttonBar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #ccc;
+      justify-content: flex-end;
+      z-index: 30;
+    }
+    .btn {
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      background: #007AFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #container {
+      position: relative;
+      flex: 1;
+      overflow: auto;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start; /* allow scrolling to top */
+    }
+    /* Wrapper around image + overlays */
+    #imgWrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+      max-width: 100%;
+    }
+    /* Planogram image: slightly faded for contrast */
+    #planogramImg {
+      width: 100%;
+      height: auto;
+      display: block;
+      opacity: 0.8;
+    }
+    /* Canvas for drawing sits exactly over the wrapper */
+    #drawCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;     /* Prevent default scroll‐zoom while drawing */
+      pointer-events: none;    /* Only enabled during Draw Mode */
+      z-index: 10;
+    }
+    /* Permanent overlay cells (once drawn) */
+    .overlay-cell {
+      position: absolute;
+      border: 2px solid rgba(0, 0, 0, 0.3);
+      border-radius: 6px;
+      background: rgba(224, 224, 224, 0.6);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #000;
+      transition: background 0.2s, border-color 0.2s;
+      user-select: none;
+      touch-action: auto;     /* Allow scrolling when touch on cell */
+      z-index: 20;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .overlay-cell.orange { background: rgba(255, 165, 0, 0.7); border-color: #cc8400; }
+    .overlay-cell.red    { background: rgba(255, 0, 0, 0.6);   border-color: #b30000; }
+    .overlay-cell.green  { background: rgba(0, 128, 0, 0.6);   border-color: #006600; }
+
+    /* “×” delete button in top-right corner of block */
+    .delete-btn {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      line-height: 18px;
+      text-align: center;
+      cursor: pointer;
+      z-index: 25;
+    }
+
+    /* Description text: one line, ellipsis if too long */
+    .desc-text {
+      width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #000;
+    }
+    .overlay-cell.highlighted .desc-text {
+      color: #fff; /* White text on highlight */
+    }
+
+    /* Modal backdrop + centered list */
+    #listContainer {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    #listContainer.active { display: flex; }
+    #listContent {
+      background: #fff;
+      width: 90%;
+      max-width: 400px;
+      max-height: 80%;
+      overflow-y: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    #listContent ul {
+      list-style: none;
+      margin: 0;
+      padding: 16px;
+    }
+    #listContent li {
+      padding: 10px 8px;
+      border-bottom: 1px solid #ddd;
+      font-size: 1rem;
+    }
+    #listCloseBtn {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    /* Hidden file inputs */
+    #importInput, #photoInput {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="buttonBar">
+    <button id="enterDrawModeBtn" class="btn">Draw New Block</button>
+    <button id="toggleListBtn" class="btn">View List</button>
+    <button id="clearAllBtn" class="btn">Clear All Highlights</button>
+    <button id="hidePhotoBtn" class="btn">Hide Photo</button>
+    <button id="changePhotoBtn" class="btn">Change Photo</button>
+    <button id="saveTemplateBtn" class="btn">Save Template</button>
+    <button id="loadTemplateBtn" class="btn">Load Template</button>
+    <button id="loadSampleBtn" class="btn">Load Sample Template</button>
+    <button id="exportBtn" class="btn">Export JSON</button>
+    <button id="importBtn" class="btn">Import JSON</button>
+    <input type="file" id="importInput" accept=".json">
+    <input type="file" id="photoInput" accept="image/*">
+  </div>
+
+  <div id="container">
+    <div id="imgWrapper">
+      <img id="planogramImg" src="" alt="Planogram photo">
+      <canvas id="drawCanvas"></canvas>
+    </div>
+  </div>
+
+  <!-- modal list popup -->
+  <div id="listContainer">
+    <div id="listContent">
+      <button id="listCloseBtn">&times;</button>
+      <ul id="itemList"></ul>
+    </div>
+  </div>
+
+  <script>
+    /*****************************************************
+     * 1) SAMPLE TEMPLATE from uploaded JSON
+     *****************************************************/
+    // This array is taken from Ingles-8ft-POG-Hostess.json uploaded by user.
+    const SAMPLE_TEMPLATE = [
+      {
+        "id": "blk1749558263509",
+        "topPct": 1.574803149606299,
+        "leftPct": 7.086614173228346,
+        "widthPct": 22.15223097112861,
+        "heightPct": 9.84251968503937,
+        "desc": "Powdered Donettes - Bag",
+        "upc": "11111",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558293189",
+        "topPct": 1.6535433070866141,
+        "leftPct": 29.816272965879264,
+        "widthPct": 24.566929133858274,
+        "heightPct": 9.921259842519685,
+        "desc": "Crunch Donettes - Bag",
+        "upc": "2222",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558320798",
+        "topPct": 1.811023622047244,
+        "leftPct": 54.38320209973754,
+        "widthPct": 12.493438320209968,
+        "heightPct": 9.724409448818896,
+        "desc": "Frosted Donettes - Bag",
+        "upc": "3333",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558359758",
+        "topPct": 1.8503937007874016,
+        "leftPct": 67.08661417322834,
+        "widthPct": 13.175853018372706,
+        "heightPct": 9.606299212598426,
+        "desc": "Old Fashioned Donettes - Bag",
+        "upc": "4444",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558392646",
+        "topPct": 1.968503937007874,
+        "leftPct": 80.31496062992126,
+        "widthPct": 14.068241469816272,
+        "heightPct": 9.37007874015748,
+        "desc": "Double Choc Donettes -Bag",
+        "upc": "55555",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558435149",
+        "topPct": 15.984251968503937,
+        "leftPct": 4.724409448818897,
+        "widthPct": 34.69816272965879,
+        "heightPct": 10.669291338582678,
+        "desc": "Powdered Donettes - MP",
+        "upc": "2-1111",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558475678",
+        "topPct": 16.023622047244093,
+        "leftPct": 40.26246719160105,
+        "widthPct": 17.06036745406825,
+        "heightPct": 10.669291338582678,
+        "desc": "Kazbars - Choc",
+        "upc": "3333",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558502222",
+        "topPct": 15.984251968503937,
+        "leftPct": 57.427821522309706,
+        "widthPct": 12.860892388451454,
+        "heightPct": 10.787401574803152,
+        "desc": "Kazbars - Caramel",
+        "upc": "4444",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558519486",
+        "topPct": 16.023622047244093,
+        "leftPct": 70.498687664042,
+        "widthPct": 23.832020997375324,
+        "heightPct": 10.944881889763785,
+        "desc": "Muffins",
+        "upc": "44433",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558546039",
+        "topPct": 29.251968503937007,
+        "leftPct": 5.2493438320209975,
+        "widthPct": 30.971128608923884,
+        "heightPct": 10.708661417322837,
+        "desc": "Choc Donettes - MP",
+        "upc": "3434",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558563342",
+        "topPct": 32.40157480314961,
+        "leftPct": 36.37795275590551,
+        "widthPct": 19.580052493438323,
+        "heightPct": 7.559055118110237,
+        "desc": "Cherry Danish",
+        "upc": "2q34234",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558586438",
+        "topPct": 32.40157480314961,
+        "leftPct": 56.22047244094488,
+        "widthPct": 19.580052493438323,
+        "heightPct": 7.519685039370081,
+        "desc": "Blueberry Danish",
+        "upc": "536756",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558606718",
+        "topPct": 30.708661417322837,
+        "leftPct": 76.43044619422572,
+        "widthPct": 14.435695538057743,
+        "heightPct": 9.173228346456689,
+        "desc": "HoHos - MP",
+        "upc": "2314234",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558635558",
+        "topPct": 43.58267716535433,
+        "leftPct": 7.559055118110236,
+        "widthPct": 40.94488188976378,
+        "heightPct": 8.700787401574807,
+        "desc": "Baby Bundts - Strawberry",
+        "upc": "342534",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558655022",
+        "topPct": 43.74015748031496,
+        "leftPct": 49.028871391076116,
+        "widthPct": 41.99475065616797,
+        "heightPct": 8.582677165354326,
+        "desc": "Baby Bundts - Choc",
+        "upc": "5467567",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558677454",
+        "topPct": 55.70866141732284,
+        "leftPct": 6.351706036745407,
+        "widthPct": 33.43832020997376,
+        "heightPct": 7.086614173228341,
+        "desc": "Twinkies - MP",
+        "upc": "435643",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558707126",
+        "topPct": 55.62992125984252,
+        "leftPct": 40.10498687664042,
+        "widthPct": 16.22047244094488,
+        "heightPct": 7.125984251968511,
+        "desc": "Twinkies - Banana",
+        "upc": "345634",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558722774",
+        "topPct": 55.70866141732284,
+        "leftPct": 56.535433070866134,
+        "widthPct": 16.430446194225723,
+        "heightPct": 7.125984251968497,
+        "desc": "Cherry Pies",
+        "upc": "43564356",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558740598",
+        "topPct": 56.06299212598426,
+        "leftPct": 73.43832020997375,
+        "widthPct": 16.640419947506572,
+        "heightPct": 6.811023622047237,
+        "desc": "Apple Pies",
+        "upc": "42356234",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558765166",
+        "topPct": 65.90551181102362,
+        "leftPct": 8.136482939632545,
+        "widthPct": 31.653543307086622,
+        "heightPct": 6.929133858267733,
+        "desc": "Ding Dongs - MP",
+        "upc": "34523",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558790845",
+        "topPct": 65.78740157480316,
+        "leftPct": 40.57742782152231,
+        "widthPct": 15.800524934383198,
+        "heightPct": 7.0472440944881924,
+        "desc": "Vanilla Zingers - MP",
+        "upc": "3456",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558827798",
+        "topPct": 65.62992125984252,
+        "leftPct": 57.637795275590555,
+        "widthPct": 30.971128608923884,
+        "heightPct": 7.244094488188978,
+        "desc": "Choc Zingers - MP",
+        "upc": "3456",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558848150",
+        "topPct": 76.96850393700787,
+        "leftPct": 7.874015748031496,
+        "widthPct": 40.15748031496063,
+        "heightPct": 8.149606299212607,
+        "desc": "Choc Cupcakes - MP",
+        "upc": "4356",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558874245",
+        "topPct": 77.1259842519685,
+        "leftPct": 48.818897637795274,
+        "widthPct": 19.527559055118104,
+        "heightPct": 7.9527559055118076,
+        "desc": "Birthdday Cupcakes - MP",
+        "upc": "6754",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558895654",
+        "topPct": 77.1259842519685,
+        "leftPct": 68.66141732283465,
+        "widthPct": 19.212598425196845,
+        "heightPct": 8.110236220472444,
+        "desc": "Orange Cupcakes - MP",
+        "upc": "24352435",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558919774",
+        "topPct": 90.15748031496062,
+        "leftPct": 7.086614173228346,
+        "widthPct": 18.582677165354333,
+        "heightPct": 7.125984251968518,
+        "desc": "Coffee Cakes - Fam Pack",
+        "upc": "345634",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558936863",
+        "topPct": 89.56692913385827,
+        "leftPct": 26.614173228346456,
+        "widthPct": 19.632545931758532,
+        "heightPct": 7.716535433070874,
+        "desc": "Coffee Cakes - MP",
+        "upc": "345634",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558952893",
+        "topPct": 89.44881889763779,
+        "leftPct": 46.56167979002625,
+        "widthPct": 19.527559055118118,
+        "heightPct": 7.5196850393700885,
+        "desc": "Golden Cupcakes - MP",
+        "upc": "456754",
+        "highlight": 0
+      },
+      {
+        "id": "blk1749558973245",
+        "topPct": 89.5275590551181,
+        "leftPct": 66.66666666666666,
+        "widthPct": 20.734908136482943,
+        "heightPct": 7.559055118110237,
+        "desc": "Snowballs - MP",
+        "upc": "2345",
+        "highlight": 0
+      }
+    ];
+
+    /*****************************************************
+     * 2) STATE & STORAGE
+     *****************************************************/
+    const STORAGE_KEY = "planogramDrawData";
+    const IMAGE_KEY   = "planogramImageData";
+    const TEMPLATES_KEY = "planogramTemplates";
+    // Initialize state
+    let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { blocks: [] };
+    function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+    /*****************************************************
+     * 3) ELEMENT REFS & INITIAL SETUP
+     *****************************************************/
+    const container       = document.getElementById("container");
+    const wrapper         = document.getElementById("imgWrapper");
+    const imgEl           = document.getElementById("planogramImg");
+    const drawCanvas      = document.getElementById("drawCanvas");
+    const ctx             = drawCanvas.getContext("2d");
+    const listContainer   = document.getElementById("listContainer");
+    const itemList        = document.getElementById("itemList");
+    const toggleListBtn   = document.getElementById("toggleListBtn");
+    const listCloseBtn    = document.getElementById("listCloseBtn");
+    const enterDrawBtn    = document.getElementById("enterDrawModeBtn");
+    const clearAllBtn     = document.getElementById("clearAllBtn");
+    const hidePhotoBtn    = document.getElementById("hidePhotoBtn");
+    const changePhotoBtn  = document.getElementById("changePhotoBtn");
+    const saveTemplateBtn = document.getElementById("saveTemplateBtn");
+    const loadTemplateBtn = document.getElementById("loadTemplateBtn");
+    const loadSampleBtn   = document.getElementById("loadSampleBtn");
+    const exportBtn       = document.getElementById("exportBtn");
+    const importBtn       = document.getElementById("importBtn");
+    const importInput     = document.getElementById("importInput");
+    const photoInput      = document.getElementById("photoInput");
+
+    // On image load: resize canvas, render blocks, rebuild list
+    imgEl.addEventListener("load", () => {
+      resizeCanvasToWrapper();
+      renderAllBlocks();
+      rebuildList();
+    });
+    window.addEventListener("resize", () => {
+      if (imgEl.complete) {
+        resizeCanvasToWrapper();
+        renderAllBlocks();
+      }
+    });
+
+    // On startup: load stored image or default IMG_6047.jpg, then sample if needed
+    window.addEventListener("DOMContentLoaded", () => {
+      // Load stored background image if exists
+      const storedImage = localStorage.getItem(IMAGE_KEY);
+      if (storedImage) {
+        imgEl.src = storedImage;
+      } else {
+        // Default to IMG_6047.jpg if present in same folder
+        imgEl.src = "IMG_6047.jpg";
+        // Save to localStorage so next time persists
+        localStorage.setItem(IMAGE_KEY, imgEl.src);
+      }
+      // If no blocks saved yet, load the uploaded JSON as sample
+      if (!localStorage.getItem(STORAGE_KEY) || state.blocks.length === 0) {
+        state.blocks = JSON.parse(JSON.stringify(SAMPLE_TEMPLATE));
+        saveState();
+      }
+      // Trigger rendering if image already loaded
+      if (imgEl.complete) {
+        resizeCanvasToWrapper();
+        renderAllBlocks();
+        rebuildList();
+      }
+    });
+
+    function resizeCanvasToWrapper() {
+      const w = wrapper.clientWidth, h = wrapper.clientHeight;
+      drawCanvas.width = w; drawCanvas.height = h;
+      drawCanvas.style.width = w + "px";
+      drawCanvas.style.height = h + "px";
+      drawCanvas.style.top = "0"; drawCanvas.style.left = "0";
+    }
+
+    /*****************************************************
+     * 4) DRAW MODE
+     *****************************************************/
+    let drawing=false, startX=0, startY=0;
+    function toPercentCoords(cX,cY){
+      const r=wrapper.getBoundingClientRect();
+      return [ ((cY - r.top)/r.height)*100, ((cX - r.left)/r.width)*100 ];
+    }
+    enterDrawBtn.addEventListener("click",()=>{
+      if (!imgEl.src) {
+        alert("Please set a background image first via 'Change Photo'.");
+        return;
+      }
+      alert("Drag on the image to draw a new block. Release to finalize.");
+      drawCanvas.style.pointerEvents="auto";
+      drawCanvas.addEventListener("mousedown", startDraw);
+      drawCanvas.addEventListener("touchstart", startDraw, {passive:false});
+    });
+    function startDraw(e){
+      e.preventDefault();
+      drawing = true;
+      const pt = e.touches ? e.touches[0] : e;
+      startX = pt.clientX; startY = pt.clientY;
+      drawCanvas.addEventListener("mousemove", drawRect);
+      drawCanvas.addEventListener("touchmove", drawRect, {passive:false});
+      drawCanvas.addEventListener("mouseup", endDraw);
+      drawCanvas.addEventListener("touchend", endDraw);
+    }
+    function drawRect(e){
+      if (!drawing) return;
+      e.preventDefault();
+      const pt = e.touches ? e.touches[0] : e;
+      const rect = wrapper.getBoundingClientRect();
+      const x0 = Math.min(startX, pt.clientX) - rect.left;
+      const y0 = Math.min(startY, pt.clientY) - rect.top;
+      const w  = Math.abs(pt.clientX - startX);
+      const h  = Math.abs(pt.clientY - startY);
+      ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+      ctx.fillStyle="rgba(224,224,224,0.4)";
+      ctx.strokeStyle="rgba(0,0,0,0.3)";
+      ctx.lineWidth=2;
+      ctx.fillRect(x0,y0,w,h);
+      ctx.strokeRect(x0,y0,w,h);
+    }
+    function endDraw(e){
+      if (!drawing) return;
+      drawing = false;
+      drawCanvas.removeEventListener("mousemove", drawRect);
+      drawCanvas.removeEventListener("touchmove", drawRect);
+      drawCanvas.removeEventListener("mouseup", endDraw);
+      drawCanvas.removeEventListener("touchend", endDraw);
+      const pt = e.changedTouches ? e.changedTouches[0] : e;
+      const [t1,l1] = toPercentCoords(startX, startY);
+      const [t2,l2] = toPercentCoords(pt.clientX, pt.clientY);
+      const topPct = Math.min(t1, t2), leftPct = Math.min(l1, l2);
+      const heightPct = Math.abs(t2 - t1), widthPct = Math.abs(l2 - l1);
+      ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+      if (widthPct * wrapper.clientWidth < 6 || heightPct * wrapper.clientHeight < 6) {
+        alert("Box too small. Try again.");
+        exitDrawMode();
+        return;
+      }
+      let descPrompt = prompt("Enter item description (one line):");
+      if (descPrompt === null) { exitDrawMode(); return; }
+      descPrompt = descPrompt.trim().replace(/[\r\n]+/g,' ');
+      if (!descPrompt) { exitDrawMode(); return; }
+      let upc = prompt("Enter UPC number:");
+      if (upc === null) { exitDrawMode(); return; }
+      upc = upc.trim();
+      if (!upc) { exitDrawMode(); return; }
+      const newBlock = {
+        id: "blk" + Date.now(),
+        topPct, leftPct, widthPct, heightPct,
+        desc: descPrompt, upc,
+        highlight: 0
+      };
+      state.blocks.push(newBlock);
+      saveState();
+      exitDrawMode();
+      renderAllBlocks();
+      rebuildList();
+    }
+    function exitDrawMode(){
+      drawCanvas.style.pointerEvents="none";
+      drawCanvas.removeEventListener("mousedown", startDraw);
+      drawCanvas.removeEventListener("touchstart", startDraw);
+      ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+    }
+
+    /*****************************************************
+     * 5) RENDER BLOCKS
+     *****************************************************/
+    function renderAllBlocks(){
+      wrapper.querySelectorAll(".overlay-cell").forEach(el=>el.remove());
+      const w = wrapper.clientWidth, h = wrapper.clientHeight;
+      state.blocks.forEach(b=>{
+        const pxT = (b.topPct/100)*h, pxL = (b.leftPct/100)*w;
+        const pxH = (b.heightPct/100)*h, pxW = (b.widthPct/100)*w;
+        const cell = document.createElement("div");
+        cell.className = "overlay-cell"; cell.dataset.id = b.id;
+        cell.style.top    = pxT + "px";
+        cell.style.left   = pxL + "px";
+        cell.style.width  = pxW + "px";
+        cell.style.height = pxH + "px";
+        // Description text
+        const descDiv = document.createElement("div");
+        descDiv.className = "desc-text";
+        descDiv.textContent = b.desc;
+        cell.appendChild(descDiv);
+        // Delete “×” button
+        const delBtn = document.createElement("div");
+        delBtn.className = "delete-btn"; delBtn.innerHTML = "&times;";
+        delBtn.addEventListener("click", e=>{
+          e.stopPropagation();
+          if (confirm("Delete this block?")) {
+            state.blocks = state.blocks.filter(x=>x.id !== b.id);
+            saveState();
+            renderAllBlocks();
+            rebuildList();
+          }
+        });
+        cell.appendChild(delBtn);
+        // Highlight logic on click
+        cell.addEventListener("click", ()=>handleBlockClick(b.id, cell));
+        wrapper.appendChild(cell);
+        applyHighlightStyle(cell, b.highlight);
+      });
+    }
+    function applyHighlightStyle(cell, hl){
+      cell.classList.remove("orange","red","green","highlighted");
+      if (hl === 1) cell.classList.add("orange","highlighted");
+      else if (hl === 2) cell.classList.add("red","highlighted");
+      else if (hl === 3) cell.classList.add("green","highlighted");
+      const txtDiv = cell.querySelector(".desc-text");
+      if (txtDiv) {
+        txtDiv.style.color = hl > 0 ? "#fff" : "#000";
+      }
+    }
+
+    /*****************************************************
+     * 6) HIGHLIGHT CYCLE
+     *****************************************************/
+    function handleBlockClick(id, cellEl){
+      const b = state.blocks.find(x=>x.id === id);
+      if (!b) return;
+      if (b.highlight < 2) {
+        b.highlight++;
+      } else if (b.highlight === 2) {
+        // 3rd click => finished; keep green highlight, remove from list
+        b.highlight = 3;
+      } else {
+        if (!confirm("Clear this block’s highlight?")) return;
+        b.highlight = 0;
+      }
+      saveState();
+      applyHighlightStyle(cellEl, b.highlight);
+      rebuildList();
+    }
+
+    /*****************************************************
+     * 7) REBUILD LIST
+     *****************************************************/
+    function rebuildList(){
+      itemList.innerHTML = "";
+      state.blocks.forEach(b=>{
+        if (b.highlight === 1 || b.highlight === 2) {
+          const tag = b.highlight === 1 ? "Low" : "Out";
+          const li = document.createElement("li");
+          li.textContent = `${b.desc} (UPC: ${b.upc}) — ${tag}`;
+          attachLongPress(li, b.id);
+          itemList.appendChild(li);
+        }
+      });
+    }
+    function attachLongPress(li, id){
+      let tid = null;
+      const start = e => {
+        e.preventDefault();
+        tid = setTimeout(()=>{
+          if (!confirm("Remove this item from list & clear its highlight?")) return;
+          const b = state.blocks.find(x=>x.id===id);
+          if (b) {
+            b.highlight = 0;
+            saveState();
+            const cellEl = wrapper.querySelector(`.overlay-cell[data-id="${id}"]`);
+            if (cellEl) applyHighlightStyle(cellEl, b.highlight);
+          }
+          li.remove();
+        }, 600);
+      };
+      const cancel = () => clearTimeout(tid);
+      ["touchstart","mousedown"].forEach(evt=>li.addEventListener(evt, start));
+      ["touchend","touchmove","mouseup","mouseleave"].forEach(evt=>li.addEventListener(evt, cancel));
+    }
+
+    /*****************************************************
+     * 8) LIST MODAL HANDLING
+     *****************************************************/
+    toggleListBtn.addEventListener("click", ()=>{
+      rebuildList();
+      listContainer.classList.add("active");
+    });
+    listCloseBtn.addEventListener("click", ()=>{
+      listContainer.classList.remove("active");
+    });
+    listContainer.addEventListener("click", e => {
+      if (e.target === listContainer) listContainer.classList.remove("active");
+    });
+
+    /*****************************************************
+     * 9) CLEAR ALL
+     *****************************************************/
+    clearAllBtn.addEventListener("click", ()=>{
+      if (!confirm("Are you sure you want to clear ALL highlights?")) return;
+      state.blocks.forEach(b=>b.highlight = 0);
+      saveState();
+      renderAllBlocks();
+      rebuildList();
+    });
+
+    /*****************************************************
+     * 10) HIDE / SHOW PHOTO
+     *****************************************************/
+    let photoHidden = false;
+    hidePhotoBtn.addEventListener("click", ()=>{
+      if (!photoHidden) {
+        const w = wrapper.clientWidth + "px", h = wrapper.clientHeight + "px";
+        wrapper.style.width = w; wrapper.style.height = h;
+        imgEl.style.display = "none"; drawCanvas.style.display = "none";
+        hidePhotoBtn.textContent = "Show Photo"; photoHidden = true;
+      } else {
+        wrapper.style.width = ""; wrapper.style.height = "";
+        imgEl.style.display = imgEl.src ? "block" : "none";
+        drawCanvas.style.display = imgEl.src ? "block" : "none";
+        hidePhotoBtn.textContent = "Hide Photo"; photoHidden = false;
+        if (imgEl.src) {
+          resizeCanvasToWrapper();
+        }
+      }
+    });
+
+    /*****************************************************
+     * 11) CHANGE BACKGROUND PHOTO
+     *****************************************************/
+    changePhotoBtn.addEventListener("click", ()=>{
+      photoInput.value = "";
+      photoInput.click();
+    });
+    photoInput.addEventListener("change", event => {
+      const file = photoInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const dataUrl = e.target.result;
+        imgEl.src = dataUrl;
+        localStorage.setItem(IMAGE_KEY, dataUrl);
+        imgEl.onload = () => {
+          resizeCanvasToWrapper();
+          renderAllBlocks();
+          rebuildList();
+        };
+      };
+      reader.readAsDataURL(file);
+    });
+
+    /*****************************************************
+     * 12) TEMPLATES
+     *****************************************************/
+    saveTemplateBtn.addEventListener("click", ()=>{
+      const name = prompt("Enter a name for this template:").trim();
+      if (!name) return;
+      const all = JSON.parse(localStorage.getItem(TEMPLATES_KEY))||{};
+      all[name] = JSON.parse(JSON.stringify(state.blocks));
+      localStorage.setItem(TEMPLATES_KEY, JSON.stringify(all));
+      alert(`Template "${name}" saved.`);
+    });
+    loadTemplateBtn.addEventListener("click", ()=>{
+      const all = JSON.parse(localStorage.getItem(TEMPLATES_KEY))||{};
+      const names = Object.keys(all);
+      if (!names.length) { alert("No templates saved."); return; }
+      const choice = prompt("Available templates:\n"+names.join("\n")+"\n\nEnter name to load:");
+      if (!choice || !all[choice]) { alert("Template not found."); return; }
+      if (!confirm(`Load template "${choice}"? This will overwrite current blocks.`)) return;
+      state.blocks = JSON.parse(JSON.stringify(all[choice]));
+      saveState();
+      // Ensure photo is shown if exists
+      photoHidden = false;
+      wrapper.style.width = ""; wrapper.style.height = "";
+      imgEl.style.display = imgEl.src ? "block" : "none";
+      drawCanvas.style.display = imgEl.src ? "block" : "none";
+      hidePhotoBtn.textContent = "Hide Photo";
+      if (imgEl.src) {
+        resizeCanvasToWrapper();
+      }
+      renderAllBlocks();
+      rebuildList();
+      alert(`Template "${choice}" loaded.`);
+    });
+    loadSampleBtn.addEventListener("click", ()=>{
+      if (!confirm("Load the uploaded sample template? This will overwrite current blocks.")) return;
+      state.blocks = JSON.parse(JSON.stringify(SAMPLE_TEMPLATE));
+      saveState();
+      renderAllBlocks();
+      rebuildList();
+      alert("Sample template loaded.");
+    });
+
+    /*****************************************************
+     * 13) EXPORT JSON with File System Access API if available
+     *****************************************************/
+    exportBtn.addEventListener("click", async () => {
+      const dataStr = JSON.stringify(state.blocks, null, 2);
+      if (window.showSaveFilePicker) {
+        try {
+          const opts = {
+            types: [{
+              description: 'JSON Files',
+              accept: { 'application/json': ['.json'] }
+            }]
+          };
+          const handle = await window.showSaveFilePicker(opts);
+          const writable = await handle.createWritable();
+          await writable.write(dataStr);
+          await writable.close();
+          alert("Export successful via File System dialog.");
+        } catch (err) {
+          console.error("showSaveFilePicker error:", err);
+          fallbackDownload(dataStr);
+        }
+      } else {
+        fallbackDownload(dataStr);
+      }
+    });
+    function fallbackDownload(dataStr) {
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const now = new Date();
+      const fname = "planogram_state_" + now.toISOString().replace(/[:.]/g,'-') + ".json";
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert("Export via download dialog.");
+    }
+
+    /*****************************************************
+     * 14) IMPORT JSON with File System Access API if available
+     *****************************************************/
+    importBtn.addEventListener("click", async () => {
+      if (window.showOpenFilePicker) {
+        try {
+          const [handle] = await window.showOpenFilePicker({
+            types: [{
+              description: 'JSON Files',
+              accept: { 'application/json': ['.json'] }
+            }],
+            multiple: false
+          });
+          const file = await handle.getFile();
+          const text = await file.text();
+          processImportedJSON(text);
+          return;
+        } catch (err) {
+          console.error("showOpenFilePicker error:", err);
+          importInput.click();
+        }
+      } else {
+        importInput.click();
+      }
+    });
+    importInput.addEventListener("change", event => {
+      const file = importInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => processImportedJSON(e.target.result);
+      reader.readAsText(file);
+    });
+    function processImportedJSON(text) {
+      try {
+        const imported = JSON.parse(text);
+        if (!Array.isArray(imported)) {
+          alert("Invalid format: expected an array of blocks.");
+          return;
+        }
+        if (!confirm("Importing will replace current blocks. Continue?")) return;
+        for (const b of imported) {
+          if (typeof b.topPct !== 'number' || typeof b.leftPct !== 'number' ||
+              typeof b.widthPct !== 'number' || typeof b.heightPct !== 'number' ||
+              typeof b.desc !== 'string' || typeof b.upc !== 'string' ||
+              typeof b.highlight !== 'number' || !b.id) {
+            alert("Invalid block structure in imported file.");
+            return;
+          }
+        }
+        state.blocks = imported;
+        saveState();
+        // Ensure photo is shown if exists
+        photoHidden = false;
+        wrapper.style.width = ""; wrapper.style.height = "";
+        imgEl.style.display = imgEl.src ? "block" : "none";
+        drawCanvas.style.display = imgEl.src ? "block" : "none";
+        hidePhotoBtn.textContent = "Hide Photo";
+        if (imgEl.src) {
+          resizeCanvasToWrapper();
+        }
+        renderAllBlocks();
+        rebuildList();
+        alert("Import successful.");
+      } catch (err) {
+        console.error(err);
+        alert("Failed to parse JSON: " + err.message);
+      }
+    }
+
+    /*****************************************************
+     * 15) INIT
+     *****************************************************/
+    if (imgEl.complete && imgEl.src) {
+      resizeCanvasToWrapper();
+      renderAllBlocks();
+      rebuildList();
+    }
+  </script>
+</body>
+</html>

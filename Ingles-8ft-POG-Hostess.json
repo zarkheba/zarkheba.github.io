@@ -1,0 +1,292 @@
+[
+  {
+    "id": "blk1749558263509",
+    "topPct": 1.574803149606299,
+    "leftPct": 7.086614173228346,
+    "widthPct": 22.15223097112861,
+    "heightPct": 9.84251968503937,
+    "desc": "Powdered Donettes - Bag",
+    "upc": "11111",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558293189",
+    "topPct": 1.6535433070866141,
+    "leftPct": 29.816272965879264,
+    "widthPct": 24.566929133858274,
+    "heightPct": 9.921259842519685,
+    "desc": "Crunch Donettes - Bag",
+    "upc": "2222",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558320798",
+    "topPct": 1.811023622047244,
+    "leftPct": 54.38320209973754,
+    "widthPct": 12.493438320209968,
+    "heightPct": 9.724409448818896,
+    "desc": "Frosted Donettes - Bag",
+    "upc": "3333",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558359758",
+    "topPct": 1.8503937007874016,
+    "leftPct": 67.08661417322834,
+    "widthPct": 13.175853018372706,
+    "heightPct": 9.606299212598426,
+    "desc": "Old Fashioned Donettes - Bag",
+    "upc": "4444",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558392646",
+    "topPct": 1.968503937007874,
+    "leftPct": 80.31496062992126,
+    "widthPct": 14.068241469816272,
+    "heightPct": 9.37007874015748,
+    "desc": "Double Choc Donettes -Bag",
+    "upc": "55555",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558435149",
+    "topPct": 15.984251968503937,
+    "leftPct": 4.724409448818897,
+    "widthPct": 34.69816272965879,
+    "heightPct": 10.669291338582678,
+    "desc": "Powdered Donettes - MP",
+    "upc": "2-1111",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558475678",
+    "topPct": 16.023622047244093,
+    "leftPct": 40.26246719160105,
+    "widthPct": 17.06036745406825,
+    "heightPct": 10.669291338582678,
+    "desc": "Kazbars - Choc",
+    "upc": "3333",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558502222",
+    "topPct": 15.984251968503937,
+    "leftPct": 57.427821522309706,
+    "widthPct": 12.860892388451454,
+    "heightPct": 10.787401574803152,
+    "desc": "Kazbars - Caramel",
+    "upc": "4444",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558519486",
+    "topPct": 16.023622047244093,
+    "leftPct": 70.498687664042,
+    "widthPct": 23.832020997375324,
+    "heightPct": 10.944881889763785,
+    "desc": "Muffins",
+    "upc": "44433",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558546039",
+    "topPct": 29.251968503937007,
+    "leftPct": 5.2493438320209975,
+    "widthPct": 30.971128608923884,
+    "heightPct": 10.708661417322837,
+    "desc": "Choc Donettes - MP",
+    "upc": "3434",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558563342",
+    "topPct": 32.40157480314961,
+    "leftPct": 36.37795275590551,
+    "widthPct": 19.580052493438323,
+    "heightPct": 7.559055118110237,
+    "desc": "Cherry Danish",
+    "upc": "2q34234",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558586438",
+    "topPct": 32.40157480314961,
+    "leftPct": 56.22047244094488,
+    "widthPct": 19.580052493438323,
+    "heightPct": 7.519685039370081,
+    "desc": "Blueberry Danish",
+    "upc": "536756",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558606718",
+    "topPct": 30.708661417322837,
+    "leftPct": 76.43044619422572,
+    "widthPct": 14.435695538057743,
+    "heightPct": 9.173228346456689,
+    "desc": "HoHos - MP",
+    "upc": "2314234",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558635558",
+    "topPct": 43.58267716535433,
+    "leftPct": 7.559055118110236,
+    "widthPct": 40.94488188976378,
+    "heightPct": 8.700787401574807,
+    "desc": "Baby Bundts - Strawberry",
+    "upc": "342534",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558655022",
+    "topPct": 43.74015748031496,
+    "leftPct": 49.028871391076116,
+    "widthPct": 41.99475065616797,
+    "heightPct": 8.582677165354326,
+    "desc": "Baby Bundts - Choc",
+    "upc": "5467567",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558677454",
+    "topPct": 55.70866141732284,
+    "leftPct": 6.351706036745407,
+    "widthPct": 33.43832020997376,
+    "heightPct": 7.086614173228341,
+    "desc": "Twinkies - MP",
+    "upc": "435643",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558707126",
+    "topPct": 55.62992125984252,
+    "leftPct": 40.10498687664042,
+    "widthPct": 16.22047244094488,
+    "heightPct": 7.125984251968511,
+    "desc": "Twinkies - Banana",
+    "upc": "345634",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558722774",
+    "topPct": 55.70866141732284,
+    "leftPct": 56.535433070866134,
+    "widthPct": 16.430446194225723,
+    "heightPct": 7.125984251968497,
+    "desc": "Cherry Pies",
+    "upc": "43564356",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558740598",
+    "topPct": 56.06299212598426,
+    "leftPct": 73.43832020997375,
+    "widthPct": 16.640419947506572,
+    "heightPct": 6.811023622047237,
+    "desc": "Apple Pies",
+    "upc": "42356234",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558765166",
+    "topPct": 65.90551181102362,
+    "leftPct": 8.136482939632545,
+    "widthPct": 31.653543307086622,
+    "heightPct": 6.929133858267733,
+    "desc": "Ding Dongs - MP",
+    "upc": "34523",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558790845",
+    "topPct": 65.78740157480316,
+    "leftPct": 40.57742782152231,
+    "widthPct": 15.800524934383198,
+    "heightPct": 7.0472440944881924,
+    "desc": "Vanilla Zingers - MP",
+    "upc": "3456",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558827798",
+    "topPct": 65.62992125984252,
+    "leftPct": 57.637795275590555,
+    "widthPct": 30.971128608923884,
+    "heightPct": 7.244094488188978,
+    "desc": "Choc Zingers - MP",
+    "upc": "3456",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558848150",
+    "topPct": 76.96850393700787,
+    "leftPct": 7.874015748031496,
+    "widthPct": 40.15748031496063,
+    "heightPct": 8.149606299212607,
+    "desc": "Choc Cupcakes - MP",
+    "upc": "4356",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558874245",
+    "topPct": 77.1259842519685,
+    "leftPct": 48.818897637795274,
+    "widthPct": 19.527559055118104,
+    "heightPct": 7.9527559055118076,
+    "desc": "Birthdday Cupcakes - MP",
+    "upc": "6754",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558895654",
+    "topPct": 77.1259842519685,
+    "leftPct": 68.66141732283465,
+    "widthPct": 19.212598425196845,
+    "heightPct": 8.110236220472444,
+    "desc": "Orange Cupcakes - MP",
+    "upc": "24352435",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558919774",
+    "topPct": 90.15748031496062,
+    "leftPct": 7.086614173228346,
+    "widthPct": 18.582677165354333,
+    "heightPct": 7.125984251968518,
+    "desc": "Coffee Cakes - Fam Pack",
+    "upc": "345634",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558936863",
+    "topPct": 89.56692913385827,
+    "leftPct": 26.614173228346456,
+    "widthPct": 19.632545931758532,
+    "heightPct": 7.716535433070874,
+    "desc": "Coffee Cakes - MP",
+    "upc": "345634",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558952893",
+    "topPct": 89.44881889763779,
+    "leftPct": 46.56167979002625,
+    "widthPct": 19.527559055118118,
+    "heightPct": 7.5196850393700885,
+    "desc": "Golden Cupcakes - MP",
+    "upc": "456754",
+    "highlight": 0
+  },
+  {
+    "id": "blk1749558973245",
+    "topPct": 89.5275590551181,
+    "leftPct": 66.66666666666666,
+    "widthPct": 20.734908136482943,
+    "heightPct": 7.559055118110237,
+    "desc": "Snowballs - MP",
+    "upc": "2345",
+    "highlight": 0
+  }
+]
