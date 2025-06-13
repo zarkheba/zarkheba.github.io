@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Store Database Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        #nav {
+            display: flex;
+            justify-content: center;
+            margin: 1rem 0;
+        }
+        #nav button {
+            margin: 0 0.5rem;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            background-color: #ddd;
+            cursor: pointer;
+        }
+        #nav button.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        main {
+            padding: 1rem;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 1rem 0;
+            padding: 1rem;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .flex-col {
+            flex: 1;
+            min-width: 200px;
+        }
+        #store-list .store-card {
+            cursor: default;
+            transition: transform 0.2s;
+            position: relative;
+            padding-bottom: 1.5rem;
+        }
+        #store-list .store-card:hover {
+            transform: scale(1.01);
+        }
+        .employee-item {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .employee-item input {
+            flex: 1;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .btn-small {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.9rem;
+        }
+        #file-controls {
+            margin-top: 1rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .details {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #ccc;
+            display: none;
+        }
+        .details p {
+            margin: 0.3rem 0;
+        }
+        .action-buttons {
+            position: absolute;
+            bottom: 0.5rem;
+            right: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        #search-container {
+            margin: 1rem 0;
+            display: flex;
+            justify-content: center;
+        }
+        #search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        /* Modal for JSON copy */
+        #json-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+        #json-modal .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 1rem;
+            border-radius: 8px;
+            max-width: 90%;
+        }
+        #json-modal textarea {
+            width: 100%;
+            height: 200px;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-family: monospace;
+        }
+        #json-modal .close-btn {
+            float: right;
+            cursor: pointer;
+            font-size: 1.2rem;
+            background: none;
+            border: none;
+        }
+        @media (min-width: 600px) {
+            .flex-row .form-group {
+                flex: 1;
+                min-width: calc(50% - 1rem);
+            }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Store Database Tool</h1>
+</header>
+<div id="nav">
+    <button id="btn-add" class="active">Add / Edit Store</button>
+    <button id="btn-view">View Stores</button>
+</div>
+<main>
+    <section id="add-edit-section">
+        <div class="card">
+            <h2 id="form-title">Add New Store</h2>
+            <form id="store-form">
+                <input type="hidden" id="store-id" />
+                <div class="form-group">
+                    <label for="store-name">Store Name</label>
+                    <input type="text" id="store-name" required />
+                </div>
+                <div class="flex-row">
+                    <div class="form-group flex-col">
+                        <label for="store-number">Store Number</label>
+                        <input type="text" id="store-number" required />
+                    </div>
+                    <div class="form-group flex-col">
+                        <label for="store-address">Store Address</label>
+                        <input type="text" id="store-address" required />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <h3>Aisles and Sides</h3>
+                </div>
+                <div class="flex-row">
+                    <div class="form-group flex-col">
+                        <label for="aisle-hostess">Which Aisle is Hostess on?</label>
+                        <input type="text" id="aisle-hostess" />
+                    </div>
+                    <div class="form-group flex-col">
+                        <label for="side-hostess">Which side of the aisle?</label>
+                        <input type="text" id="side-hostess" />
+                    </div>
+                </div>
+                <div class="flex-row">
+                    <div class="form-group flex-col">
+                        <label for="aisle-pb">Which Aisle is Peanut Butter?</label>
+                        <input type="text" id="aisle-pb" />
+                    </div>
+                    <div class="form-group flex-col">
+                        <label for="side-pb">Which side of the aisle?</label>
+                        <input type="text" id="side-pb" />
+                    </div>
+                </div>
+                <div class="flex-row">
+                    <div class="form-group flex-col">
+                        <label for="aisle-toppings">Which Aisle is Toppings?</label>
+                        <input type="text" id="aisle-toppings" />
+                    </div>
+                    <div class="form-group flex-col">
+                        <label for="side-toppings">Which side of the aisle?</label>
+                        <input type="text" id="side-toppings" />
+                    </div>
+                </div>
+                <div class="flex-row">
+                    <div class="form-group flex-col">
+                        <label for="aisle-coffee">Which Aisle is Coffee?</label>
+                        <input type="text" id="aisle-coffee" />
+                    </div>
+                    <div class="form-group flex-col">
+                        <label for="side-coffee">Which side of the aisle?</label>
+                        <input type="text" id="side-coffee" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="freezer-location">Where is Hostess Freezer located?</label>
+                    <input type="text" id="freezer-location" />
+                </div>
+                <div class="form-group">
+                    <h3>Employee List</h3>
+                    <div id="employees-container"></div>
+                    <button type="button" id="add-employee-btn" class="btn btn-secondary">Add Employee</button>
+                </div>
+                <div class="form-group">
+                    <label for="special-notes">Special Notes</label>
+                    <textarea id="special-notes" rows="3"></textarea>
+                </div>
+                <div class="flex-row" style="justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary" id="save-btn">Save Store</button>
+                    <button type="button" class="btn btn-secondary" id="new-store-btn">New Store</button>
+                </div>
+            </form>
+        </div>
+        <div id="file-controls" class="card">
+            <button id="save-json-btn" class="btn btn-primary">Save Database to JSON</button>
+            <input type="file" id="load-json-input" accept=".json" style="display:none;" />
+            <button id="load-json-btn" class="btn btn-secondary">Load Database from JSON</button>
+        </div>
+    </section>
+    <section id="view-section" style="display:none;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Stores</h2>
+            <button id="btn-add-from-view" class="btn btn-primary">Add New Store</button>
+        </div>
+        <div id="search-container">
+            <input type="text" id="search-input" placeholder="Search by name, number, or address" />
+        </div>
+        <div id="store-list"></div>
+    </section>
+</main>
+<!-- Modal for JSON copy -->
+<div id="json-modal">
+    <div class="modal-content">
+        <button class="close-btn" id="close-json-modal">&times;</button>
+        <h3>Exported JSON</h3>
+        <textarea id="json-textarea" readonly></textarea>
+        <button id="copy-json-btn" class="btn btn-primary">Copy to Clipboard</button>
+    </div>
+</div>
+<script>
+    // IndexedDB setup
+    const DB_NAME = 'StoreDatabase';
+    const STORE_NAME = 'stores';
+    let db;
+
+    function openDatabase() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, 1);
+            request.onupgradeneeded = function(event) {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                }
+            };
+            request.onsuccess = function(event) {
+                db = event.target.result;
+                resolve(db);
+            };
+            request.onerror = function(event) {
+                reject('IndexedDB error: ' + event.target.errorCode);
+            };
+        });
+    }
+
+    function getAllStoresFromDB() {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.getAll();
+            request.onsuccess = function() {
+                resolve(request.result);
+            };
+            request.onerror = function(event) {
+                reject('Error fetching stores: ' + event.target.errorCode);
+            };
+        });
+    }
+
+    function saveStoreToDB(storeData) {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.put(storeData);
+            request.onsuccess = function() {
+                resolve();
+            };
+            request.onerror = function(event) {
+                reject('Error saving store: ' + event.target.errorCode);
+            };
+        });
+    }
+
+    function deleteStoreFromDB(id) {
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction(STORE_NAME, 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const request = store.delete(id);
+            request.onsuccess = function() {
+                resolve();
+            };
+            request.onerror = function(event) {
+                reject('Error deleting store: ' + event.target.errorCode);
+            };
+        });
+    }
+
+    let stores = [];
+
+    // Utility to load from IndexedDB into memory
+    async function loadStores() {
+        try {
+            stores = await getAllStoresFromDB();
+        } catch (error) {
+            console.error(error);
+            stores = [];
+        }
+    }
+
+    // File save/export JSON with fallback for mobile
+    async function saveToJsonFile() {
+        const dataStr = JSON.stringify(stores, null, 2);
+        // Try File System Access API
+        if (window.showSaveFilePicker) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: 'store_database.json',
+                    types: [{
+                        description: 'JSON Files',
+                        accept: {'application/json': ['.json']}
+                    }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(dataStr);
+                await writable.close();
+                alert('Database saved successfully');
+                return;
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    // User cancelled; do nothing further
+                    return;
+                }
+                console.error('File System Access API error:', err);
+                alert('Unable to use file save dialog. Will provide JSON for manual save.');
+            }
+        } else {
+            // No FS API: inform user
+            console.warn('No File System Access API support.');
+        }
+        // Fallback: show modal with JSON for manual copy/share
+        showJsonModal(dataStr);
+    }
+
+    function showJsonModal(jsonText) {
+        const modal = document.getElementById('json-modal');
+        const textarea = document.getElementById('json-textarea');
+        textarea.value = jsonText;
+        modal.style.display = 'block';
+    }
+
+    function closeJsonModal() {
+        const modal = document.getElementById('json-modal');
+        modal.style.display = 'none';
+    }
+
+    async function copyJsonToClipboard() {
+        const textarea = document.getElementById('json-textarea');
+        try {
+            await navigator.clipboard.writeText(textarea.value);
+            alert('JSON copied to clipboard');
+        } catch (err) {
+            console.error('Clipboard write failed:', err);
+            alert('Failed to copy. Please copy manually.');
+        }
+    }
+
+    function loadFromJsonFile(file) {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const json = JSON.parse(e.target.result);
+                if (Array.isArray(json)) {
+                    // Clear existing DB then save new entries
+                    const transaction = db.transaction(STORE_NAME, 'readwrite');
+                    const storeObj = transaction.objectStore(STORE_NAME);
+                    storeObj.clear().onsuccess = async () => {
+                        for (const item of json) {
+                            if (!item.id) item.id = Date.now().toString() + Math.random();
+                            await saveStoreToDB(item);
+                        }
+                        await loadStores();
+                        alert('Database loaded successfully');
+                        renderStoreList();
+                    };
+                } else {
+                    alert('Invalid JSON format: expected an array');
+                }
+            } catch (err) {
+                alert('Error parsing JSON file');
+                console.error(err);
+            } finally {
+                document.getElementById('load-json-input').value = '';
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // Navigation
+    const btnAdd = document.getElementById('btn-add');
+    const btnView = document.getElementById('btn-view');
+    const addSection = document.getElementById('add-edit-section');
+    const viewSection = document.getElementById('view-section');
+    const btnAddFromView = document.getElementById('btn-add-from-view');
+    const searchInput = document.getElementById('search-input');
+
+    btnAdd.addEventListener('click', () => switchToAdd());
+    btnView.addEventListener('click', () => switchToView());
+    btnAddFromView.addEventListener('click', () => switchToAdd());
+    searchInput.addEventListener('input', () => renderStoreList());
+
+    function switchToAdd() {
+        btnAdd.classList.add('active');
+        btnView.classList.remove('active');
+        addSection.style.display = '';
+        viewSection.style.display = 'none';
+        resetForm();
+    }
+    function switchToView() {
+        btnView.classList.add('active');
+        btnAdd.classList.remove('active');
+        addSection.style.display = 'none';
+        viewSection.style.display = '';
+        renderStoreList();
+    }
+
+    // Employee list management
+    function createEmployeeItem(name = '', position = '') {
+        const div = document.createElement('div');
+        div.classList.add('employee-item');
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'Name';
+        nameInput.value = name;
+        nameInput.required = true;
+
+        const positionInput = document.createElement('input');
+        positionInput.type = 'text';
+        positionInput.placeholder = 'Position';
+        positionInput.value = position;
+        positionInput.required = true;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.textContent = 'Remove';
+        removeBtn.classList.add('btn', 'btn-danger');
+        removeBtn.addEventListener('click', () => {
+            div.remove();
+        });
+
+        div.appendChild(nameInput);
+        div.appendChild(positionInput);
+        div.appendChild(removeBtn);
+        return div;
+    }
+
+    document.getElementById('add-employee-btn').addEventListener('click', () => {
+        const container = document.getElementById('employees-container');
+        container.appendChild(createEmployeeItem());
+    });
+
+    // Form handling
+    const form = document.getElementById('store-form');
+    const formTitle = document.getElementById('form-title');
+    const newStoreBtn = document.getElementById('new-store-btn');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('store-id').value;
+        const storeData = {
+            id: id || Date.now().toString(),
+            name: document.getElementById('store-name').value,
+            number: document.getElementById('store-number').value,
+            address: document.getElementById('store-address').value,
+            aisleHostess: document.getElementById('aisle-hostess').value,
+            sideHostess: document.getElementById('side-hostess').value,
+            aislePB: document.getElementById('aisle-pb').value,
+            sidePB: document.getElementById('side-pb').value,
+            aisleToppings: document.getElementById('aisle-toppings').value,
+            sideToppings: document.getElementById('side-toppings').value,
+            aisleCoffee: document.getElementById('aisle-coffee').value,
+            sideCoffee: document.getElementById('side-coffee').value,
+            freezerLocation: document.getElementById('freezer-location').value,
+            employees: Array.from(document.getElementById('employees-container').children).map(item => {
+                const inputs = item.querySelectorAll('input');
+                return { name: inputs[0].value, position: inputs[1].value };
+            }),
+            notes: document.getElementById('special-notes').value
+        };
+        try {
+            await saveStoreToDB(storeData);
+            await loadStores();
+            alert(id ? 'Store updated successfully' : 'Store added successfully');
+            resetForm();
+        } catch (err) {
+            console.error(err);
+            alert('Error saving store');
+        }
+    });
+
+    newStoreBtn.addEventListener('click', () => resetForm());
+
+    function resetForm() {
+        form.reset();
+        document.getElementById('employees-container').innerHTML = '';
+        document.getElementById('store-id').value = '';
+        formTitle.textContent = 'Add New Store';
+    }
+
+    // Render store list with search filter
+    function renderStoreList() {
+        const term = searchInput.value.trim().toLowerCase();
+        const container = document.getElementById('store-list');
+        container.innerHTML = '';
+        let filtered = stores;
+        if (term) {
+            filtered = stores.filter(store =>
+                (store.name && store.name.toLowerCase().includes(term)) ||
+                (store.number && store.number.toLowerCase().includes(term)) ||
+                (store.address && store.address.toLowerCase().includes(term))
+            );
+        }
+        if (filtered.length === 0) {
+            container.innerHTML = '<p>No stores match the search. Please add or adjust your search.</p>';
+            return;
+        }
+        filtered.forEach(store => {
+            const card = document.createElement('div');
+            card.classList.add('card', 'store-card');
+            card.innerHTML = `
+                <h3>${store.name}</h3>
+                <p><strong>Number:</strong> ${store.number}</p>
+                <p><strong>Address:</strong> ${store.address}</p>
+                <div class="details">
+                    <p><strong>Hostess Aisle:</strong> ${store.aisleHostess || 'N/A'} (${store.sideHostess || ''})</p>
+                    <p><strong>Peanut Butter Aisle:</strong> ${store.aislePB || 'N/A'} (${store.sidePB || ''})</p>
+                    <p><strong>Toppings Aisle:</strong> ${store.aisleToppings || 'N/A'} (${store.sideToppings || ''})</p>
+                    <p><strong>Coffee Aisle:</strong> ${store.aisleCoffee || 'N/A'} (${store.sideCoffee || ''})</p>
+                    <p><strong>Hostess Freezer Location:</strong> ${store.freezerLocation || 'N/A'}</p>
+                    <div><strong>Employees:</strong></div>
+                    ${store.employees && store.employees.length ? 
+                        '<ul>' + store.employees.map(emp => `<li>${emp.name} - ${emp.position}</li>`).join('') + '</ul>' 
+                        : '<p>No employees listed.</p>'}
+                    <p><strong>Notes:</strong> ${store.notes || 'N/A'}</p>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-small btn-secondary btn-toggle-details">Show Details</button>
+                    <button class="btn btn-small btn-primary btn-edit">Edit</button>
+                    <button class="btn btn-small btn-danger btn-delete">Delete</button>
+                </div>
+            `;
+            const detailsDiv = card.querySelector('.details');
+            const toggleBtn = card.querySelector('.btn-toggle-details');
+            toggleBtn.addEventListener('click', () => {
+                if (detailsDiv.style.display === 'none' || !detailsDiv.style.display) {
+                    detailsDiv.style.display = 'block';
+                    toggleBtn.textContent = 'Hide Details';
+                } else {
+                    detailsDiv.style.display = 'none';
+                    toggleBtn.textContent = 'Show Details';
+                }
+            });
+            const editBtn = card.querySelector('.btn-edit');
+            editBtn.addEventListener('click', () => {
+                switchToAdd();
+                loadStoreIntoForm(store);
+            });
+            const deleteBtn = card.querySelector('.btn-delete');
+            deleteBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (confirm('Are you sure you want to delete this store?')) {
+                    try {
+                        await deleteStoreFromDB(store.id);
+                        await loadStores();
+                        renderStoreList();
+                    } catch (err) {
+                        console.error(err);
+                        alert('Error deleting store');
+                    }
+                }
+            });
+            container.appendChild(card);
+        });
+    }
+
+    function loadStoreIntoForm(store) {
+        document.getElementById('store-id').value = store.id;
+        document.getElementById('store-name').value = store.name;
+        document.getElementById('store-number').value = store.number;
+        document.getElementById('store-address').value = store.address;
+        document.getElementById('aisle-hostess').value = store.aisleHostess || '';
+        document.getElementById('side-hostess').value = store.sideHostess || '';
+        document.getElementById('aisle-pb').value = store.aislePB || '';
+        document.getElementById('side-pb').value = store.sidePB || '';
+        document.getElementById('aisle-toppings').value = store.aisleToppings || '';
+        document.getElementById('side-toppings').value = store.sideToppings || '';
+        document.getElementById('aisle-coffee').value = store.aisleCoffee || '';
+        document.getElementById('side-coffee').value = store.sideCoffee || '';
+        document.getElementById('freezer-location').value = store.freezerLocation || '';
+        document.getElementById('special-notes').value = store.notes || '';
+        const container = document.getElementById('employees-container');
+        container.innerHTML = '';
+        if (store.employees && Array.isArray(store.employees)) {
+            store.employees.forEach(emp => {
+                container.appendChild(createEmployeeItem(emp.name, emp.position));
+            });
+        }
+        formTitle.textContent = 'Edit Store';
+    }
+
+    // File controls
+    document.getElementById('save-json-btn').addEventListener('click', saveToJsonFile);
+    document.getElementById('load-json-btn').addEventListener('click', () => {
+        document.getElementById('load-json-input').click();
+    });
+    document.getElementById('load-json-input').addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            loadFromJsonFile(e.target.files[0]);
+        }
+    });
+
+    // Modal controls
+    document.getElementById('close-json-modal').addEventListener('click', closeJsonModal);
+    document.getElementById('copy-json-btn').addEventListener('click', copyJsonToClipboard);
+    window.addEventListener('click', (e) => {
+        const modal = document.getElementById('json-modal');
+        if (e.target === modal) {
+            closeJsonModal();
+        }
+    });
+
+    // Initialize DB and load
+    (async () => {
+        try {
+            await openDatabase();
+            await loadStores();
+        } catch (err) {
+            console.error(err);
+            alert('Error initializing database');
+        }
+        switchToAdd();
+    })();
+</script>
+</body>
+</html>
