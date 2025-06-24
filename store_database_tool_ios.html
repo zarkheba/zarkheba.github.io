@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Store Database Tool</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        *, *::before, *::after {
+            box-sizing: inherit;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        #nav {
+            display: flex;
+            justify-content: center;
+            margin: 0.5rem;
+            flex-wrap: wrap;
+        }
+        #nav button {
+            margin: 0.25rem;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            background-color: #ddd;
+            cursor: pointer;
+            flex: 1 1 auto;
+            max-width: 200px;
+        }
+        #nav button.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        main {
+            flex: 1 1 auto;
+            width: 100%;
+            padding: 0.5rem;
+            overflow-y: auto;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 0.5rem 0;
+            padding: 1rem;
+            width: 100%;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.3rem;
+            word-break: break-word;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .flex-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .flex-col {
+            flex: 1 1 calc(50% - 0.5rem);
+            min-width: 120px;
+        }
+        @media (max-width: 600px) {
+            .flex-col {
+                flex: 1 1 100%;
+            }
+        }
+        #file-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            align-items: center;
+        }
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .btn-secondary {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .btn-small {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.9rem;
+        }
+        #search-container {
+            margin: 0.5rem 0;
+            display: flex;
+            justify-content: center;
+        }
+        #search-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 0.5rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #store-list .store-card {
+            position: relative;
+            margin-bottom: 0.5rem;
+            padding-bottom: 2rem;
+            cursor: default;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+        #store-list .store-card:hover {
+            transform: scale(1.01);
+        }
+        .details {
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 1px solid #ccc;
+            display: none;
+        }
+        .details p {
+            margin: 0.3rem 0;
+            word-wrap: break-word;
+        }
+        .action-buttons {
+            position: absolute;
+            bottom: 0.5rem;
+            right: 0.5rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .employee-item {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .employee-item input {
+            flex: 1 1 calc(50% - 0.5rem);
+            min-width: 100px;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <h1>Store Database Tool</h1>
+</header>
+<div id="nav">
+    <button id="btn-add" class="active">Add / Edit Store</button>
+    <button id="btn-view">View Stores</button>
+</div>
+<main>
+    <section id="add-edit-section">
+        <div class="card">
+            <h2 id="form-title">Add New Store</h2>
+            <form id="store-form">
+                <input type="hidden" id="store-id" />
+                <div class="form-group">
+                    <label for="store-name">Store Name</label>
+                    <input type="text" id="store-name" required />
+                </div>
+                <div class="flex-row">
+                    <div class="form-group flex-col">
+                        <label for="store-number">Store Number</label>
+                        <input type="text" id="store-number" required />
+                    </div>
+                    <div class="form-group flex-col">
+                        <label for="store-address">Store Address</label>
+                        <input type="text" id="store-address" required />
+                    </div>
+                </div>
+                <div class="form-group"><h3>Aisles and Sides</h3></div>
+                <div class="flex-row">
+                    <div class="form-group flex-col">
+                        <label for="aisle-hostess">Which Aisle is Hostess on?</label>
+                        <input type="text" id="aisle-hostess" />
+                    </div>
+                    <div class="form-group flex-col">
+                        <label for="side-hostess">Which side of the aisle?</label>
+                        <input type="text" id="side-hostess" />
+                    </div>
+                </div>
+                <div class="flex-row">
+                    <div class="form-group flex-col">
+                        <label for="aisle-pb">Which Aisle is Peanut Butter?</label>
+                        <input type="text" id="aisle-pb" />
+                    </div>
+                    <div class="form-group flex-col">
+                        <label for="side-pb">Which side of the aisle?</label>
+                        <input type="text" id="side-pb" />
+                    </div>
+                </div>
+                <div class="flex-row">
+                    <div class="form-group flex-col">
+                        <label for="aisle-toppings">Which Aisle is Toppings?</label>
+                        <input type="text" id="aisle-toppings" />
+                    </div>
+                    <div class="form-group flex-col">
+                        <label for="side-toppings">Which side of the aisle?</label>
+                        <input type="text" id="side-toppings" />
+                    </div>
+                </div>
+                <div class="flex-row">
+                    <div class="form-group flex-col">
+                        <label for="aisle-coffee">Which Aisle is Coffee?</label>
+                        <input type="text" id="aisle-coffee" />
+                    </div>
+                    <div class="form-group flex-col">
+                        <label for="side-coffee">Which side of the aisle?</label>
+                        <input type="text" id="side-coffee" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="freezer-location">Where is Hostess Freezer located?</label>
+                    <input type="text" id="freezer-location" />
+                </div>
+                <div class="form-group">
+                    <h3>Employee List</h3>
+                    <div id="employees-container"></div>
+                    <button type="button" id="add-employee-btn" class="btn btn-secondary">Add Employee</button>
+                </div>
+                <div class="form-group">
+                    <label for="special-notes">Special Notes</label>
+                    <textarea id="special-notes" rows="3"></textarea>
+                </div>
+                <div class="flex-row" style="justify-content: flex-end;">
+                    <button type="submit" class="btn btn-primary" id="save-btn">Save Store</button>
+                    <button type="button" class="btn btn-secondary" id="new-store-btn">New Store</button>
+                </div>
+            </form>
+        </div>
+        <div id="file-controls" class="card">
+            <button id="save-json-btn" class="btn btn-primary">Save Database</button>
+            <input type="file" id="load-json-input" accept=".json" style="display:none;" />
+            <button id="load-json-btn" class="btn btn-secondary">Load Database</button>
+        </div>
+    </section>
+    <section id="view-section" style="display:none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <h2>Stores</h2>
+            <button id="btn-add-from-view" class="btn btn-primary">Add New Store</button>
+        </div>
+        <div id="search-container">
+            <input type="text" id="search-input" placeholder="Search by name, number, or address" />
+        </div>
+        <div id="store-list"></div>
+    </section>
+</main>
+<script>
+    let stores = [];
+    function loadStoresFromStorage() {
+        const data = localStorage.getItem('stores');
+        if (data) {
+            try { stores = JSON.parse(data); } catch { stores = []; }
+        } else stores = [];
+    }
+    function saveStoresToStorage() {
+        localStorage.setItem('stores', JSON.stringify(stores));
+    }
+    function saveFormDraft() {
+        const draft = {
+            id: document.getElementById('store-id').value,
+            name: document.getElementById('store-name').value,
+            number: document.getElementById('store-number').value,
+            address: document.getElementById('store-address').value,
+            aisleHostess: document.getElementById('aisle-hostess').value,
+            sideHostess: document.getElementById('side-hostess').value,
+            aislePB: document.getElementById('aisle-pb').value,
+            sidePB: document.getElementById('side-pb').value,
+            aisleToppings: document.getElementById('aisle-toppings').value,
+            sideToppings: document.getElementById('side-toppings').value,
+            aisleCoffee: document.getElementById('aisle-coffee').value,
+            sideCoffee: document.getElementById('side-coffee').value,
+            freezerLocation: document.getElementById('freezer-location').value,
+            employees: Array.from(document.getElementById('employees-container').children).map(item => {
+                const inputs = item.querySelectorAll('input');
+                return { name: inputs[0].value, position: inputs[1].value };
+            }),
+            notes: document.getElementById('special-notes').value
+        };
+        localStorage.setItem('storeFormDraft', JSON.stringify(draft));
+    }
+    function loadFormDraft() {
+        const data = localStorage.getItem('storeFormDraft');
+        if (data) {
+            try {
+                const draft = JSON.parse(data);
+                document.getElementById('store-id').value = draft.id||'';
+                document.getElementById('store-name').value = draft.name||'';
+                document.getElementById('store-number').value = draft.number||'';
+                document.getElementById('store-address').value = draft.address||'';
+                document.getElementById('aisle-hostess').value = draft.aisleHostess||'';
+                document.getElementById('side-hostess').value = draft.sideHostess||'';
+                document.getElementById('aisle-pb').value = draft.aislePB||'';
+                document.getElementById('side-pb').value = draft.sidePB||'';
+                document.getElementById('aisle-toppings').value = draft.aisleToppings||'';
+                document.getElementById('side-toppings').value = draft.sideToppings||'';
+                document.getElementById('aisle-coffee').value = draft.aisleCoffee||'';
+                document.getElementById('side-coffee').value = draft.sideCoffee||'';
+                document.getElementById('freezer-location').value = draft.freezerLocation||'';
+                document.getElementById('special-notes').value = draft.notes||'';
+                const container = document.getElementById('employees-container');
+                container.innerHTML = '';
+                if (Array.isArray(draft.employees)) {
+                    draft.employees.forEach(emp=>{
+                        container.appendChild(createEmployeeItem(emp.name, emp.position));
+                    });
+                }
+            } catch {}
+        }
+    }
+    function clearFormDraft() {
+        localStorage.removeItem('storeFormDraft');
+    }
+    async function saveToJsonFile() {
+        const dataStr = JSON.stringify(stores, null, 2);
+        let filename = prompt('Filename:', 'store_database.json') || 'store_database.json';
+        if (!filename.toLowerCase().endsWith('.json')) filename += '.json';
+        // Try File System Access API (for desktop)
+        if (window.showSaveFilePicker) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: filename,
+                    types: [{ description: 'JSON Files', accept: { 'application/json': ['.json'] } }]
+                });
+                const writable = await handle.createWritable();
+                await writable.write(dataStr);
+                await writable.close();
+                return;
+            } catch {}
+        }
+        // Try Web Share API for iOS
+        try {
+            const file = new File([dataStr], filename, { type: 'application/json' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: filename });
+                return;
+            }
+        } catch {}
+        // Fallback download
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    function loadFromJsonFile(file) {
+        const reader = new FileReader();
+        reader.onload = e=>{
+            try {
+                const json = JSON.parse(e.target.result);
+                if (Array.isArray(json)) stores = json;
+            } catch {
+                alert('Invalid JSON');
+            }
+            saveStoresToStorage();
+            renderStoreList();
+            document.getElementById('load-json-input').value = '';
+        };
+        reader.readAsText(file);
+    }
+    const btnAdd = document.getElementById('btn-add');
+    const btnView = document.getElementById('btn-view');
+    const addSection = document.getElementById('add-edit-section');
+    const viewSection = document.getElementById('view-section');
+    const btnAddFromView = document.getElementById('btn-add-from-view');
+    const searchInput = document.getElementById('search-input');
+    const form = document.getElementById('store-form');
+    const formTitle = document.getElementById('form-title');
+    btnAdd.addEventListener('click', switchToAdd);
+    btnView.addEventListener('click', switchToView);
+    btnAddFromView.addEventListener('click', switchToAdd);
+    searchInput.addEventListener('input', renderStoreList);
+    document.getElementById('save-json-btn').addEventListener('click', saveToJsonFile);
+    document.getElementById('load-json-btn').addEventListener('click', ()=>document.getElementById('load-json-input').click());
+    document.getElementById('load-json-input').addEventListener('change', e=>{ if(e.target.files.length) loadFromJsonFile(e.target.files[0]); });
+    function switchToAdd() {
+        btnAdd.classList.add('active');
+        btnView.classList.remove('active');
+        addSection.style.display = '';
+        viewSection.style.display = 'none';
+        resetForm();
+        if (localStorage.getItem('storeFormDraft') && confirm('Restore unsaved data?')) loadFormDraft();
+        else clearFormDraft();
+    }
+    function switchToView() {
+        btnView.classList.add('active');
+        btnAdd.classList.remove('active');
+        addSection.style.display = 'none';
+        viewSection.style.display = '';
+        renderStoreList();
+    }
+    function createEmployeeItem(name, position) {
+        const div = document.createElement('div');
+        div.classList.add('employee-item');
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text'; nameInput.placeholder = 'Name'; nameInput.value = name||''; nameInput.required=true;
+        nameInput.addEventListener('input', saveFormDraft);
+        const positionInput = document.createElement('input');
+        positionInput.type = 'text'; positionInput.placeholder = 'Position'; positionInput.value = position||''; positionInput.required=true;
+        positionInput.addEventListener('input', saveFormDraft);
+        const removeBtn = document.createElement('button');
+        removeBtn.type='button'; removeBtn.textContent='Remove'; removeBtn.classList.add('btn','btn-danger');
+        removeBtn.addEventListener('click', ()=>{ div.remove(); saveFormDraft(); });
+        div.appendChild(nameInput); div.appendChild(positionInput); div.appendChild(removeBtn);
+        return div;
+    }
+    form.addEventListener('input', saveFormDraft);
+    form.addEventListener('submit', e=>{
+        e.preventDefault();
+        const id = document.getElementById('store-id').value;
+        const storeData = {
+            id: id || Date.now().toString(),
+            name: document.getElementById('store-name').value,
+            number: document.getElementById('store-number').value,
+            address: document.getElementById('store-address').value,
+            aisleHostess: document.getElementById('aisle-hostess').value,
+            sideHostess: document.getElementById('side-hostess').value,
+            aislePB: document.getElementById('aisle-pb').value,
+            sidePB: document.getElementById('side-pb').value,
+            aisleToppings: document.getElementById('aisle-toppings').value,
+            sideToppings: document.getElementById('side-toppings').value,
+            aisleCoffee: document.getElementById('aisle-coffee').value,
+            sideCoffee: document.getElementById('side-coffee').value,
+            freezerLocation: document.getElementById('freezer-location').value,
+            employees: Array.from(document.getElementById('employees-container').children).map(item=>{
+                const inputs=item.querySelectorAll('input');
+                return { name: inputs[0].value, position: inputs[1].value };
+            }),
+            notes: document.getElementById('special-notes').value
+        };
+        if (id) stores = stores.map(s=>s.id===id?storeData:s);
+        else stores.push(storeData);
+        saveStoresToStorage();
+        clearFormDraft();
+        resetForm();
+    });
+    document.getElementById('new-store-btn').addEventListener('click', ()=>{ resetForm(); clearFormDraft(); });
+    function resetForm() {
+        form.reset();
+        document.getElementById('employees-container').innerHTML = '';
+        document.getElementById('store-id').value = '';
+        formTitle.textContent = 'Add New Store';
+    }
+    function renderStoreList() {
+        const term = searchInput.value.trim().toLowerCase();
+        const container = document.getElementById('store-list');
+        container.innerHTML = '';
+        let filtered = stores;
+        if (term) {
+            filtered = stores.filter(store=>
+                (store.name && store.name.toLowerCase().includes(term)) ||
+                (store.number && store.number.toLowerCase().includes(term)) ||
+                (store.address && store.address.toLowerCase().includes(term))
+            );
+        }
+        if (!filtered.length) {
+            container.innerHTML = '<p>No stores match the search.</p>';
+            return;
+        }
+        filtered.forEach(store=>{
+            const card = document.createElement('div');
+            card.classList.add('card','store-card');
+            let employeeHtml = '';
+            if (store.employees && store.employees.length) {
+                employeeHtml = '<ul>' + store.employees.map(emp=>`<li>${emp.name} - ${emp.position}</li>`).join('') + '</ul>';
+            } else {
+                employeeHtml = '<p>No employees.</p>';
+            }
+            card.innerHTML = `
+                <h3>${store.name}</h3>
+                <p><strong>Number:</strong> ${store.number}</p>
+                <p><strong>Address:</strong> ${store.address}</p>
+                <button class="btn-small btn-secondary btn-toggle-details">Show Details</button>
+                <div class="details">
+                    <p><strong>Hostess Aisle:</strong> ${store.aisleHostess||'N/A'} (${store.sideHostess||''})</p>
+                    <p><strong>Peanut Butter Aisle:</strong> ${store.aislePB||'N/A'} (${store.sidePB||''})</p>
+                    <p><strong>Toppings Aisle:</strong> ${store.aisleToppings||'N/A'} (${store.sideToppings||''})</p>
+                    <p><strong>Coffee Aisle:</strong> ${store.aisleCoffee||'N/A'} (${store.sideCoffee||''})</p>
+                    <p><strong>Freezer Location:</strong> ${store.freezerLocation||'N/A'}</p>
+                    <button class="btn-small btn-secondary btn-more-details">More...</button>
+                    <div class="more-details" style="display:none; margin-top:0.5rem;">
+                        <div><strong>Employees:</strong></div>${employeeHtml}
+                        <p><strong>Notes:</strong> ${store.notes||'N/A'}</p>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-small btn-primary btn-edit">Edit</button>
+                    <button class="btn btn-small btn-danger btn-delete">Delete</button>
+                </div>
+            `;
+            const toggleBtn = card.querySelector('.btn-toggle-details');
+            const detailsDiv = card.querySelector('.details');
+            toggleBtn.addEventListener('click', ()=>{
+                if (detailsDiv.style.display==='block') {
+                    detailsDiv.style.display='none';
+                    toggleBtn.textContent='Show Details';
+                } else {
+                    detailsDiv.style.display='block';
+                    toggleBtn.textContent='Hide Details';
+                }
+            });
+            const moreBtn = card.querySelector('.btn-more-details');
+            const moreDiv = card.querySelector('.more-details');
+            moreBtn.addEventListener('click', ()=>{
+                if (moreDiv.style.display==='block') {
+                    moreDiv.style.display='none';
+                    moreBtn.textContent='More...';
+                } else {
+                    moreDiv.style.display='block';
+                    moreBtn.textContent='Less...';
+                }
+            });
+            card.querySelector('.btn-edit').addEventListener('click', ()=>{
+                switchToAdd();
+                loadStoreIntoForm(store);
+            });
+            card.querySelector('.btn-delete').addEventListener('click', e=>{
+                e.stopPropagation();
+                stores = stores.filter(s=>s.id!==store.id);
+                saveStoresToStorage();
+                renderStoreList();
+            });
+            container.appendChild(card);
+        });
+    }
+    function loadStoreIntoForm(store) {
+        document.getElementById('store-id').value = store.id;
+        document.getElementById('store-name').value = store.name;
+        document.getElementById('store-number').value = store.number;
+        document.getElementById('store-address').value = store.address;
+        document.getElementById('aisle-hostess').value = store.aisleHostess||'';
+        document.getElementById('side-hostess').value = store.sideHostess||'';
+        document.getElementById('aisle-pb').value = store.aislePB||'';
+        document.getElementById('side-pb').value = store.sidePB||'';
+        document.getElementById('aisle-toppings').value = store.aisleToppings||'';
+        document.getElementById('side-toppings').value = store.sideToppings||'';
+        document.getElementById('aisle-coffee').value = store.aisleCoffee||'';
+        document.getElementById('side-coffee').value = store.sideCoffee||'';
+        document.getElementById('freezer-location').value = store.freezerLocation||'';
+        document.getElementById('special-notes').value = store.notes||'';
+        const container = document.getElementById('employees-container');
+        container.innerHTML='';
+        if (store.employees && Array.isArray(store.employees)) {
+            store.employees.forEach(emp=>container.appendChild(createEmployeeItem(emp.name, emp.position)));
+        }
+        formTitle.textContent='Edit Store';
+    }
+    loadStoresFromStorage();
+    switchToAdd();
+</script>
+</body>
+</html>
