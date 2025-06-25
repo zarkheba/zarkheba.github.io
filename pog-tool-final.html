@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Planogram: Draw & Highlight Blocks with Toggle Toolbar</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #buttonBar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #ccc;
+      justify-content: flex-end;
+      z-index: 30;
+    }
+    #buttonBar.hidden {
+      display: none !important;
+    }
+    .btn {
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      background: #007AFF;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #container {
+      position: relative;
+      flex: 1;
+      overflow: auto;
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    #imgWrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+      max-width: 100%;
+    }
+    #planogramImg {
+      width: 100%;
+      height: auto;
+      display: block;
+      opacity: 0.8;
+    }
+    #drawCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .overlay-cell {
+      position: absolute;
+      border: 2px solid rgba(0, 0, 0, 0.3);
+      border-radius: 6px;
+      background: rgba(224, 224, 224, 0.6);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: bold;
+      color: #000;
+      transition: background 0.2s, border-color 0.2s;
+      user-select: none;
+      touch-action: auto;
+      z-index: 20;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+    .overlay-cell.orange { background: rgba(255, 165, 0, 0.7); border-color: #cc8400; }
+    .overlay-cell.red    { background: rgba(255, 0, 0, 0.6);   border-color: #b30000; }
+    .overlay-cell.green  { background: rgba(0, 128, 0, 0.6);   border-color: #006600; }
+    .delete-btn {
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      line-height: 18px;
+      text-align: center;
+      cursor: pointer;
+      z-index: 25;
+    }
+    .desc-text {
+      width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #000;
+    }
+    .overlay-cell.highlighted .desc-text {
+      color: #fff;
+    }
+    #listContainer {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+    #listContainer.active { display: flex; }
+    #listContent {
+      background: #fff;
+      width: 90%;
+      max-width: 400px;
+      max-height: 80%;
+      overflow-y: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      position: relative;
+    }
+    #listContent ul {
+      list-style: none;
+      margin: 0;
+      padding: 16px;
+    }
+    #listContent li {
+      padding: 10px 8px;
+      border-bottom: 1px solid #ddd;
+      font-size: 1rem;
+    }
+    #listCloseBtn {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      background: none;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    #importInput, #photoInput {
+      display: none;
+    }
+    #toggleToolbarBtn {
+      position: fixed;
+      bottom: 12px;
+      right: 12px;
+      z-index: 50;
+      padding: 8px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.5);
+      color: white;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div id="buttonBar">
+    <button id="enterDrawModeBtn" class="btn">Draw New Block</button>
+    <button id="toggleListBtn" class="btn">View List</button>
+    <button id="clearAllBtn" class="btn">Clear All Highlights</button>
+    <button id="hidePhotoBtn" class="btn">Hide Photo</button>
+    <button id="changePhotoBtn" class="btn">Change Photo</button>
+    <button id="saveTemplateBtn" class="btn">Save Template</button>
+    <button id="loadTemplateBtn" class="btn">Load Template</button>
+    <button id="loadSampleBtn" class="btn">Load Sample Template</button>
+    <button id="exportBtn" class="btn">Export JSON</button>
+    <button id="importBtn" class="btn">Import JSON</button>
+    <input type="file" id="importInput" accept=".json">
+    <input type="file" id="photoInput" accept="image/*">
+  </div>
+  <button id="toggleToolbarBtn">☰</button>
+
+  <div id="container">
+    <div id="imgWrapper">
+      <img id="planogramImg" src="" alt="Planogram photo">
+      <canvas id="drawCanvas"></canvas>
+    </div>
+  </div>
+
+  <div id="listContainer">
+    <div id="listContent">
+      <button id="listCloseBtn">&times;</button>
+      <ul id="itemList"></ul>
+    </div>
+  </div>
+
+  <script>
+    const SAMPLE_TEMPLATE = [
+      /* ... your SAMPLE_TEMPLATE from uploaded JSON ... */
+      {
+        "id": "blk1749558263509",
+        "topPct": 1.574803149606299,
+        "leftPct": 7.086614173228346,
+        "widthPct": 22.15223097112861,
+        "heightPct": 9.84251968503937,
+        "desc": "Powdered Donettes - Bag",
+        "upc": "11111",
+        "highlight": 0
+      },
+      /* include all entries from Ingles-8ft-POG-Hostess.json as before */
+      // ...
+    ];
+
+    const STORAGE_KEY = "planogramDrawData";
+    const IMAGE_KEY   = "planogramImageData";
+    const TEMPLATES_KEY = "planogramTemplates";
+    let state = JSON.parse(localStorage.getItem(STORAGE_KEY)) || { blocks: [] };
+    function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+    const container       = document.getElementById("container");
+    const wrapper         = document.getElementById("imgWrapper");
+    const imgEl           = document.getElementById("planogramImg");
+    const drawCanvas      = document.getElementById("drawCanvas");
+    const ctx             = drawCanvas.getContext("2d");
+    const listContainer   = document.getElementById("listContainer");
+    const itemList        = document.getElementById("itemList");
+    const toggleListBtn   = document.getElementById("toggleListBtn");
+    const listCloseBtn    = document.getElementById("listCloseBtn");
+    const enterDrawBtn    = document.getElementById("enterDrawModeBtn");
+    const clearAllBtn     = document.getElementById("clearAllBtn");
+    const hidePhotoBtn    = document.getElementById("hidePhotoBtn");
+    const changePhotoBtn  = document.getElementById("changePhotoBtn");
+    const saveTemplateBtn = document.getElementById("saveTemplateBtn");
+    const loadTemplateBtn = document.getElementById("loadTemplateBtn");
+    const loadSampleBtn   = document.getElementById("loadSampleBtn");
+    const exportBtn       = document.getElementById("exportBtn");
+    const importBtn       = document.getElementById("importBtn");
+    const importInput     = document.getElementById("importInput");
+    const photoInput      = document.getElementById("photoInput");
+    const toggleToolbarBtn = document.getElementById("toggleToolbarBtn");
+    const buttonBar       = document.getElementById("buttonBar");
+
+    function resizeCanvasToWrapper() {
+      const w = wrapper.clientWidth, h = wrapper.clientHeight;
+      drawCanvas.width = w; drawCanvas.height = h;
+      drawCanvas.style.width = w + "px";
+      drawCanvas.style.height = h + "px";
+      drawCanvas.style.top = "0"; drawCanvas.style.left = "0";
+    }
+
+    imgEl.addEventListener("load", () => {
+      resizeCanvasToWrapper();
+      renderAllBlocks();
+      rebuildList();
+    });
+    window.addEventListener("resize", () => {
+      if (imgEl.complete) {
+        resizeCanvasToWrapper();
+        renderAllBlocks();
+      }
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      const storedImage = localStorage.getItem(IMAGE_KEY);
+      if (storedImage) {
+        imgEl.src = storedImage;
+      } else {
+        imgEl.src = "IMG_6047.jpg";
+        localStorage.setItem(IMAGE_KEY, imgEl.src);
+      }
+      if (!localStorage.getItem(STORAGE_KEY) || state.blocks.length === 0) {
+        state.blocks = JSON.parse(JSON.stringify(SAMPLE_TEMPLATE));
+        saveState();
+      }
+      if (imgEl.complete && imgEl.src) {
+        resizeCanvasToWrapper();
+        renderAllBlocks();
+        rebuildList();
+      }
+      // Initialize toolbar hidden state
+      let toolbarHidden = JSON.parse(localStorage.getItem('toolbarHidden')) || false;
+      if (toolbarHidden) buttonBar.classList.add('hidden');
+    });
+
+    let drawing=false, startX=0, startY=0;
+    function toPercentCoords(cX,cY){
+      const r=wrapper.getBoundingClientRect();
+      return [ ((cY - r.top)/r.height)*100, ((cX - r.left)/r.width)*100 ];
+    }
+    enterDrawBtn.addEventListener("click",()=>{
+      if (!imgEl.src) {
+        alert("Please set a background image first via 'Change Photo'.");
+        return;
+      }
+      alert("Drag on the image to draw a new block. Release to finalize.");
+      drawCanvas.style.pointerEvents="auto";
+      drawCanvas.addEventListener("mousedown", startDraw);
+      drawCanvas.addEventListener("touchstart", startDraw, {passive:false});
+    });
+    function startDraw(e){
+      e.preventDefault();
+      drawing = true;
+      const pt = e.touches ? e.touches[0] : e;
+      startX = pt.clientX; startY = pt.clientY;
+      drawCanvas.addEventListener("mousemove", drawRect);
+      drawCanvas.addEventListener("touchmove", drawRect, {passive:false});
+      drawCanvas.addEventListener("mouseup", endDraw);
+      drawCanvas.addEventListener("touchend", endDraw);
+    }
+    function drawRect(e){
+      if (!drawing) return;
+      e.preventDefault();
+      const pt = e.touches ? e.touches[0] : e;
+      const rect = wrapper.getBoundingClientRect();
+      const x0 = Math.min(startX, pt.clientX) - rect.left;
+      const y0 = Math.min(startY, pt.clientY) - rect.top;
+      const w  = Math.abs(pt.clientX - startX);
+      const h  = Math.abs(pt.clientY - startY);
+      ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+      ctx.fillStyle="rgba(224,224,224,0.4)";
+      ctx.strokeStyle="rgba(0,0,0,0.3)";
+      ctx.lineWidth=2;
+      ctx.fillRect(x0,y0,w,h);
+      ctx.strokeRect(x0,y0,w,h);
+    }
+    function endDraw(e){
+      if (!drawing) return;
+      drawing = false;
+      drawCanvas.removeEventListener("mousemove", drawRect);
+      drawCanvas.removeEventListener("touchmove", drawRect);
+      drawCanvas.removeEventListener("mouseup", endDraw);
+      drawCanvas.removeEventListener("touchend", endDraw);
+      const pt = e.changedTouches ? e.changedTouches[0] : e;
+      const [t1,l1] = toPercentCoords(startX, startY);
+      const [t2,l2] = toPercentCoords(pt.clientX, pt.clientY);
+      const topPct = Math.min(t1, t2), leftPct = Math.min(l1, l2);
+      const heightPct = Math.abs(t2 - t1), widthPct = Math.abs(l2 - l1);
+      ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+      if (widthPct * wrapper.clientWidth < 6 || heightPct * wrapper.clientHeight < 6) {
+        alert("Box too small. Try again.");
+        exitDrawMode();
+        return;
+      }
+      let descPrompt = prompt("Enter item description (one line):");
+      if (descPrompt === null) { exitDrawMode(); return; }
+      descPrompt = descPrompt.trim().replace(/[\r\n]+/g,' ');
+      if (!descPrompt) { exitDrawMode(); return; }
+      let upc = prompt("Enter UPC number:");
+      if (upc === null) { exitDrawMode(); return; }
+      upc = upc.trim();
+      if (!upc) { exitDrawMode(); return; }
+      const newBlock = {
+        id: "blk" + Date.now(),
+        topPct, leftPct, widthPct, heightPct,
+        desc: descPrompt, upc,
+        highlight: 0
+      };
+      state.blocks.push(newBlock);
+      saveState();
+      exitDrawMode();
+      renderAllBlocks();
+      rebuildList();
+    }
+    function exitDrawMode(){
+      drawCanvas.style.pointerEvents="none";
+      drawCanvas.removeEventListener("mousedown", startDraw);
+      drawCanvas.removeEventListener("touchstart", startDraw);
+      ctx.clearRect(0,0,drawCanvas.width,drawCanvas.height);
+    }
+
+    function renderAllBlocks(){
+      wrapper.querySelectorAll(".overlay-cell").forEach(el=>el.remove());
+      const w = wrapper.clientWidth, h = wrapper.clientHeight;
+      state.blocks.forEach(b=>{
+        const pxT = (b.topPct/100)*h, pxL = (b.leftPct/100)*w;
+        const pxH = (b.heightPct/100)*h, pxW = (b.widthPct/100)*w;
+        const cell = document.createElement("div");
+        cell.className = "overlay-cell"; cell.dataset.id = b.id;
+        cell.style.top    = pxT + "px";
+        cell.style.left   = pxL + "px";
+        cell.style.width  = pxW + "px";
+        cell.style.height = pxH + "px";
+        const descDiv = document.createElement("div");
+        descDiv.className = "desc-text";
+        descDiv.textContent = b.desc;
+        cell.appendChild(descDiv);
+        const delBtn = document.createElement("div");
+        delBtn.className = "delete-btn"; delBtn.innerHTML = "&times;";
+        delBtn.addEventListener("click", e=>{
+          e.stopPropagation();
+          if (confirm("Delete this block?")) {
+            state.blocks = state.blocks.filter(x=>x.id !== b.id);
+            saveState();
+            renderAllBlocks();
+            rebuildList();
+          }
+        });
+        cell.appendChild(delBtn);
+        cell.addEventListener("click", ()=>handleBlockClick(b.id, cell));
+        wrapper.appendChild(cell);
+        applyHighlightStyle(cell, b.highlight);
+      });
+    }
+    function applyHighlightStyle(cell, hl){
+      cell.classList.remove("orange","red","green","highlighted");
+      if (hl === 1) cell.classList.add("orange","highlighted");
+      else if (hl === 2) cell.classList.add("red","highlighted");
+      else if (hl === 3) cell.classList.add("green","highlighted");
+      const txtDiv = cell.querySelector(".desc-text");
+      if (txtDiv) {
+        txtDiv.style.color = hl > 0 ? "#fff" : "#000";
+      }
+    }
+    function handleBlockClick(id, cellEl){
+      const b = state.blocks.find(x=>x.id === id);
+      if (!b) return;
+      if (b.highlight < 2) {
+        b.highlight++;
+      } else if (b.highlight === 2) {
+        b.highlight = 3;
+      } else {
+        if (!confirm("Clear this block’s highlight?")) return;
+        b.highlight = 0;
+      }
+      saveState();
+      applyHighlightStyle(cellEl, b.highlight);
+      rebuildList();
+    }
+    function rebuildList(){
+      itemList.innerHTML = "";
+      state.blocks.forEach(b=>{
+        if (b.highlight === 1 || b.highlight === 2) {
+          const tag = b.highlight === 1 ? "Low" : "Out";
+          const li = document.createElement("li");
+          li.textContent = `${b.desc} (UPC: ${b.upc}) — ${tag}`;
+          attachLongPress(li, b.id);
+          itemList.appendChild(li);
+        }
+      });
+    }
+    function attachLongPress(li, id){
+      let tid = null;
+      const start = e => {
+        e.preventDefault();
+        tid = setTimeout(()=>{
+          if (!confirm("Remove this item from list & clear its highlight?")) return;
+          const b = state.blocks.find(x=>x.id===id);
+          if (b) {
+            b.highlight = 0;
+            saveState();
+            const cellEl = wrapper.querySelector(`.overlay-cell[data-id="${id}"]`);
+            if (cellEl) applyHighlightStyle(cellEl, b.highlight);
+          }
+          li.remove();
+        }, 600);
+      };
+      const cancel = () => clearTimeout(tid);
+      ["touchstart","mousedown"].forEach(evt=>li.addEventListener(evt, start));
+      ["touchend","touchmove","mouseup","mouseleave"].forEach(evt=>li.addEventListener(evt, cancel));
+    }
+    toggleListBtn.addEventListener("click", ()=>{
+      rebuildList();
+      listContainer.classList.add("active");
+    });
+    listCloseBtn.addEventListener("click", ()=>{
+      listContainer.classList.remove("active");
+    });
+    listContainer.addEventListener("click", e => {
+      if (e.target === listContainer) listContainer.classList.remove("active");
+    });
+    clearAllBtn.addEventListener("click", ()=>{
+      if (!confirm("Are you sure you want to clear ALL highlights?")) return;
+      state.blocks.forEach(b=>b.highlight = 0);
+      saveState();
+      renderAllBlocks();
+      rebuildList();
+    });
+    let photoHidden = false;
+    hidePhotoBtn.addEventListener("click", ()=>{
+      if (!photoHidden) {
+        const w = wrapper.clientWidth + "px", h = wrapper.clientHeight + "px";
+        wrapper.style.width = w; wrapper.style.height = h;
+        imgEl.style.display = "none"; drawCanvas.style.display = "none";
+        hidePhotoBtn.textContent = "Show Photo"; photoHidden = true;
+      } else {
+        wrapper.style.width = ""; wrapper.style.height = "";
+        imgEl.style.display = imgEl.src ? "block" : "none";
+        drawCanvas.style.display = imgEl.src ? "block" : "none";
+        hidePhotoBtn.textContent = "Hide Photo"; photoHidden = false;
+        if (imgEl.src) {
+          resizeCanvasToWrapper();
+        }
+      }
+    });
+    changePhotoBtn.addEventListener("click", ()=>{
+      photoInput.value = "";
+      photoInput.click();
+    });
+    photoInput.addEventListener("change", event => {
+      const file = photoInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const dataUrl = e.target.result;
+        imgEl.src = dataUrl;
+        localStorage.setItem(IMAGE_KEY, dataUrl);
+        imgEl.onload = () => {
+          resizeCanvasToWrapper();
+          renderAllBlocks();
+          rebuildList();
+        };
+      };
+      reader.readAsDataURL(file);
+    });
+    saveTemplateBtn.addEventListener("click", ()=>{
+      const name = prompt("Enter a name for this template:").trim();
+      if (!name) return;
+      const all = JSON.parse(localStorage.getItem(TEMPLATES_KEY))||{};
+      all[name] = JSON.parse(JSON.stringify(state.blocks));
+      localStorage.setItem(TEMPLATES_KEY, JSON.stringify(all));
+      alert(`Template "${name}" saved.`);
+    });
+    loadTemplateBtn.addEventListener("click", ()=>{
+      const all = JSON.parse(localStorage.getItem(TEMPLATES_KEY))||{};
+      const names = Object.keys(all);
+      if (!names.length) { alert("No templates saved."); return; }
+      const choice = prompt("Available templates:\n"+names.join("\n")+"\n\nEnter name to load:");
+      if (!choice || !all[choice]) { alert("Template not found."); return; }
+      if (!confirm(`Load template "${choice}"? This will overwrite current blocks.`)) return;
+      state.blocks = JSON.parse(JSON.stringify(all[choice]));
+      saveState();
+      photoHidden = false;
+      wrapper.style.width = ""; wrapper.style.height = "";
+      imgEl.style.display = imgEl.src ? "block" : "none";
+      drawCanvas.style.display = imgEl.src ? "block" : "none";
+      hidePhotoBtn.textContent = "Hide Photo";
+      if (imgEl.src) {
+        resizeCanvasToWrapper();
+      }
+      renderAllBlocks();
+      rebuildList();
+      alert(`Template "${choice}" loaded.`);
+    });
+    loadSampleBtn.addEventListener("click", ()=>{
+      if (!confirm("Load the uploaded sample template? This will overwrite current blocks.")) return;
+      state.blocks = JSON.parse(JSON.stringify(SAMPLE_TEMPLATE));
+      saveState();
+      renderAllBlocks();
+      rebuildList();
+      alert("Sample template loaded.");
+    });
+    exportBtn.addEventListener("click", async () => {
+      const dataStr = JSON.stringify(state.blocks, null, 2);
+      if (window.showSaveFilePicker) {
+        try {
+          const opts = {
+            types: [{
+              description: 'JSON Files',
+              accept: { 'application/json': ['.json'] }
+            }]
+          };
+          const handle = await window.showSaveFilePicker(opts);
+          const writable = await handle.createWritable();
+          await writable.write(dataStr);
+          await writable.close();
+          alert("Export successful via File System dialog.");
+        } catch (err) {
+          console.error("showSaveFilePicker error:", err);
+          fallbackDownload(dataStr);
+        }
+      } else {
+        fallbackDownload(dataStr);
+      }
+    });
+    function fallbackDownload(dataStr) {
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const now = new Date();
+      const fname = "planogram_state_" + now.toISOString().replace(/[:.]/g,'-') + ".json";
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert("Export via download dialog.");
+    }
+    importBtn.addEventListener("click", async () => {
+      if (window.showOpenFilePicker) {
+        try {
+          const [handle] = await window.showOpenFilePicker({
+            types: [{
+              description: 'JSON Files',
+              accept: { 'application/json': ['.json'] }
+            }],
+            multiple: false
+          });
+          const file = await handle.getFile();
+          const text = await file.text();
+          processImportedJSON(text);
+          return;
+        } catch (err) {
+          console.error("showOpenFilePicker error:", err);
+          importInput.click();
+        }
+      } else {
+        importInput.click();
+      }
+    });
+    importInput.addEventListener("change", event => {
+      const file = importInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => processImportedJSON(e.target.result);
+      reader.readAsText(file);
+    });
+    function processImportedJSON(text) {
+      try {
+        const imported = JSON.parse(text);
+        if (!Array.isArray(imported)) {
+          alert("Invalid format: expected an array of blocks.");
+          return;
+        }
+        if (!confirm("Importing will replace current blocks. Continue?")) return;
+        for (const b of imported) {
+          if (typeof b.topPct !== 'number' || typeof b.leftPct !== 'number' ||
+              typeof b.widthPct !== 'number' || typeof b.heightPct !== 'number' ||
+              typeof b.desc !== 'string' || typeof b.upc !== 'string' ||
+              typeof b.highlight !== 'number' || !b.id) {
+            alert("Invalid block structure in imported file.");
+            return;
+          }
+        }
+        state.blocks = imported;
+        saveState();
+        photoHidden = false;
+        wrapper.style.width = ""; wrapper.style.height = "";
+        imgEl.style.display = imgEl.src ? "block" : "none";
+        drawCanvas.style.display = imgEl.src ? "block" : "none";
+        hidePhotoBtn.textContent = "Hide Photo";
+        if (imgEl.src) resizeCanvasToWrapper();
+        renderAllBlocks();
+        rebuildList();
+        alert("Import successful.");
+      } catch (err) {
+        console.error(err);
+        alert("Failed to parse JSON: " + err.message);
+      }
+    }
+    toggleToolbarBtn.addEventListener('click', () => {
+      buttonBar.classList.toggle('hidden');
+      const hidden = buttonBar.classList.contains('hidden');
+      localStorage.setItem('toolbarHidden', JSON.stringify(hidden));
+    });
+  </script>
+</body>
+</html>
