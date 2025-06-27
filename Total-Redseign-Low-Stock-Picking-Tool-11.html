@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventory Status App</title>
+<style>
+  :root {
+    --low-color: #FFE5B4;
+    --out-color: #FFCCCB;
+    --fulfilled-color: #32CD32;
+    --bg-color: #f4f4f9;
+    --card-bg: #ffffff;
+    --accent: #4a90e2;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  body { margin: 0; padding: 0; background: var(--bg-color); display: flex; flex-direction: column; height: 100vh; }
+  header { background: var(--accent); color: white; padding: 1rem; text-align: center; font-size: 1.5rem; }
+  #controls { display: flex; flex-wrap: wrap; gap: .5rem; padding: .5rem; background: var(--card-bg); justify-content: center; }
+  #controls input, #controls button { padding: .5rem; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; }
+  #controls button { background: var(--accent); color: #fff; border: none; cursor: pointer; }
+  #main { flex: 1; overflow-y: auto; padding: 1rem; margin: 0 auto; max-width: 700px; border: 2px solid #ccc; border-radius: 10px; background: var(--card-bg); }
+  .item { background: var(--card-bg); margin: .5rem 0; padding: .75rem 1rem; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; position: relative; }
+  .highlight-low { background: var(--low-color); }
+  .highlight-out { background: var(--out-color); }
+  .highlight-fulfilled { background: var(--fulfilled-color); }
+  .actions { display: flex; gap: .5rem; }
+  .actions button { background: none; border: none; cursor: pointer; font-size: 1.2rem; }
+  #secondary-list { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+  #secondary-list .panel { background: var(--card-bg); padding: 1rem; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80%; overflow-y: auto; position: relative; }
+  .close { background: none; border: none; font-size: 1.5rem; position: absolute; top: .5rem; right: .75rem; cursor: pointer; }
+  .entry { margin: .25rem 0; }
+  .section-out { background-color: #ffecec; padding: .5rem; border-radius: 6px; }
+  .section-low { background-color: #fff7e6; padding: .5rem; border-radius: 6px; }
+</style>
+</head>
+<body>
+<header>Inventory Status</header>
+<div id="controls">
+  <input type="file" id="fileInput">
+  <input type="text" id="newDesc" placeholder="Description">
+  <input type="text" id="newUpc" placeholder="UPC">
+  <button id="addBtn">Add Item</button>
+  <button id="viewBtn">View Low/Out List</button>
+  <button id="clearBtn">Clear Highlights</button>
+  <button id="saveBtn">Save List</button>
+</div>
+<div id="main"></div>
+<div id="secondary-list">
+  <div class="panel">
+    <button class="close">&times;</button>
+    <h2>Low / Out Items</h2>
+    <div id="secondary-content"></div>
+  </div>
+</div>
+<script>
+  let data = [];
+  let loadedFileName = 'inventory.json';
+
+  const main = document.getElementById('main');
+  const secondary = document.getElementById('secondary-list');
+  const secContent = document.getElementById('secondary-content');
+
+  async function autoLoad() {
+    try {
+      const response = await fetch('inventory.json');
+      if (!response.ok) throw new Error('File not found');
+      data = await response.json();
+      render();
+    } catch {
+      alert('Auto-load failed: inventory.json not found in same folder. Please load manually.');
+    }
+  }
+
+  window.onload = autoLoad;
+
+  document.getElementById('fileInput').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (file) {
+      loadedFileName = file.name;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        try {
+          data = JSON.parse(evt.target.result);
+          render();
+        } catch {
+          alert('Invalid JSON file');
+        }
+      };
+      reader.readAsText(file);
+    }
+  });
+
+  function render() {
+    main.innerHTML = '';
+    data.forEach((item, idx) => {
+      const el = document.createElement('div');
+      el.className = 'item';
+      setState(el, item.state);
+      el.innerHTML = `<span>${item.desc} (${item.upc})</span>`;
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      ['✎', '🗑'].forEach((icon, i) => {
+        const btn = document.createElement('button');
+        btn.textContent = icon;
+        btn.onclick = e => { e.stopPropagation(); i ? deleteItem(idx) : editItem(idx); };
+        actions.appendChild(btn);
+      });
+      el.appendChild(actions);
+      el.onclick = () => cycleState(item, el);
+      main.appendChild(el);
+    });
+  }
+
+  function setState(el, state) {
+    el.className = 'item';
+    if (state === 1) el.classList.add('highlight-low');
+    if (state === 2) el.classList.add('highlight-out');
+    if (state === 3) el.classList.add('highlight-fulfilled');
+  }
+
+  function cycleState(item, el) {
+    item.state = (item.state + 1) % 4;
+    if (item.state === 0 && !confirm(`Clear highlight for "${item.desc}"?`)) item.state = 3;
+    setState(el, item.state);
+  }
+
+  function editItem(idx) {
+    const i = data[idx];
+    const d = prompt('Edit description:', i.desc);
+    const u = prompt('Edit UPC:', i.upc);
+    if (d) i.desc = d.trim();
+    if (u) i.upc = u.trim();
+    render();
+  }
+
+  function deleteItem(idx) {
+    if (confirm(`Delete "${data[idx].desc}"?`)) data.splice(idx, 1);
+    render();
+  }
+
+  document.getElementById('addBtn').onclick = () => {
+    const desc = document.getElementById('newDesc').value.trim();
+    const upc = document.getElementById('newUpc').value.trim();
+    if (desc && upc) { data.push({ desc, upc, state: 0 }); render(); }
+  };
+
+  document.getElementById('clearBtn').onclick = () => {
+    if (confirm('Clear all highlights?')) {
+      data.forEach(i => i.state = 0);
+      render();
+    }
+  };
+
+  document.getElementById('viewBtn').onclick = () => {
+    secContent.innerHTML = '';
+    const outs = data.filter(i => i.state === 2);
+    const lows = data.filter(i => i.state === 1);
+    [ ['OUT', outs, 'section-out'], ['LOW', lows, 'section-low'] ].forEach(([label, items, cls]) => {
+      if (items.length) {
+        const section = document.createElement('div');
+        section.className = cls;
+        const h2 = document.createElement('h2');
+        h2.textContent = label;
+        section.appendChild(h2);
+        const groups = { Bag: [], MP: [], FamPk: [], SS: [], Other: [] };
+        items.forEach(i => {
+          const suffix = (i.desc.match(/(Bag|MP|FamPk|SS)$/) || ['Other'])[0];
+          groups[suffix].push(i);
+        });
+        Object.entries(groups).forEach(([group, list]) => {
+          if (list.length) {
+            const header = document.createElement('h3');
+            header.textContent = group;
+            section.appendChild(header);
+            list.forEach(i => {
+              const div = document.createElement('div');
+              div.className = 'entry';
+              div.textContent = `${i.desc} - ${i.upc}`;
+              section.appendChild(div);
+            });
+          }
+        });
+        secContent.appendChild(section);
+      }
+    });
+    secondary.style.display = 'flex';
+  };
+
+  document.querySelector('.close').onclick = () => secondary.style.display = 'none';
+
+  document.getElementById('saveBtn').onclick = async () => {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: loadedFileName,
+        types: [{ description: 'JSON', accept: {'application/json': ['.json']} }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(JSON.stringify(data, null, 2));
+      await writable.close();
+      alert('File saved successfully');
+    } catch (e) {
+      alert('Save cancelled or failed');
+    }
+  };
+</script>
+</body>
+</html>
