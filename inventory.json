@@ -1,0 +1,147 @@
+[
+  {
+    "desc": "Powdered Donettes - Bag",
+    "upc": "11111",
+    "state": 0
+  },
+  {
+    "desc": "Crunch Donettes - Bag",
+    "upc": "2222",
+    "state": 0
+  },
+  {
+    "desc": "Frosted Donettes - Bag",
+    "upc": "3333",
+    "state": 0
+  },
+  {
+    "desc": "Old Fashioned Donettes - Bag",
+    "upc": "4444",
+    "state": 0
+  },
+  {
+    "desc": "Double Choc Donettes -Bag",
+    "upc": "55555",
+    "state": 0
+  },
+  {
+    "desc": "Powdered Donettes - MP",
+    "upc": "2-1111",
+    "state": 0
+  },
+  {
+    "desc": "Kazbars - Choc - MP",
+    "upc": "3333",
+    "state": 0
+  },
+  {
+    "desc": "Kazbars - Caramel",
+    "upc": "4444",
+    "state": 0
+  },
+  {
+    "desc": "Muffins",
+    "upc": "44433",
+    "state": 0
+  },
+  {
+    "desc": "Choc Donettes - MP",
+    "upc": "3434",
+    "state": 0
+  },
+  {
+    "desc": "Cherry Danish",
+    "upc": "2q34234",
+    "state": 0
+  },
+  {
+    "desc": "Blueberry Danish",
+    "upc": "536756",
+    "state": 0
+  },
+  {
+    "desc": "HoHos - MP",
+    "upc": "2314234",
+    "state": 0
+  },
+  {
+    "desc": "Baby Bundts - Strawberry",
+    "upc": "342534",
+    "state": 0
+  },
+  {
+    "desc": "Baby Bundts - Choc",
+    "upc": "5467567",
+    "state": 0
+  },
+  {
+    "desc": "Twinkies - MP",
+    "upc": "435643",
+    "state": 0
+  },
+  {
+    "desc": "Twinkies - Banana",
+    "upc": "345634",
+    "state": 0
+  },
+  {
+    "desc": "Cherry Pies",
+    "upc": "43564356",
+    "state": 0
+  },
+  {
+    "desc": "Apple Pies",
+    "upc": "42356234",
+    "state": 0
+  },
+  {
+    "desc": "Ding Dongs - MP",
+    "upc": "34523",
+    "state": 0
+  },
+  {
+    "desc": "Vanilla Zingers - MP",
+    "upc": "3456",
+    "state": 0
+  },
+  {
+    "desc": "Choc Zingers - MP",
+    "upc": "3456",
+    "state": 0
+  },
+  {
+    "desc": "Choc Cupcakes - MP",
+    "upc": "4356",
+    "state": 0
+  },
+  {
+    "desc": "Birthdday Cupcakes - MP",
+    "upc": "6754",
+    "state": 0
+  },
+  {
+    "desc": "Orange Cupcakes - MP",
+    "upc": "24352435",
+    "state": 0
+  },
+  {
+    "desc": "Coffee Cakes - Fam Pack",
+    "upc": "345634",
+    "state": 0
+  },
+  {
+    "desc": "Coffee Cakes - MP",
+    "upc": "345634",
+    "state": 0
+  },
+  {
+    "desc": "Golden Cupcakes - MP",
+    "upc": "456754",
+    "state": 0
+  },
+  {
+    "desc": "Snowballs - MP",
+    "upc": "2345",
+    "state": 0
+  }
+]
