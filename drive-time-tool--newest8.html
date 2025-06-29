@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Drive Time Logger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 10px; }
+    .container { max-width: 700px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; }
+    h1 { text-align: center; margin-bottom: 1em; }
+    .form-group { margin-bottom: 1em; }
+    label { display: block; margin-bottom: 0.5em; font-weight: bold; }
+    input[list], input { width: 100%; padding: 8px; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
+    button { width: 100%; padding: 10px; font-size: 1rem; margin: 5px 0; border: none; border-radius: 4px; background: #007BFF; color: #fff; cursor: pointer; }
+    button:disabled { background: #aaa; cursor: not-allowed; }
+    button:hover:not(:disabled) { background: #0056b3; }
+    #timerDisplay { text-align: center; font-weight: bold; margin: 1em 0; font-size: 1.5rem; color: #333; }
+    #sumTotal { margin-top: 1em; font-weight: bold; font-size: 1.1rem; color: #007BFF; }
+    .table-container { width: 100%; overflow-x: auto; margin-top: 1em; border: 1px solid #ccc; border-radius: 4px; }
+    table { width: 100%; min-width: 800px; border-collapse: collapse; margin: 0; }
+    th, td { padding: 8px; border: 1px solid #ccc; text-align: left; font-size: 0.9rem; white-space: nowrap; }
+    th { background: #f0f0f0; font-weight: bold; }
+    tr:nth-child(even) { background: #f9f9f9; }
+    .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+    .modal { background: #fff; padding: 20px; border-radius: 8px; width: 90%; max-width: 400px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .modal h3 { margin-bottom: 15px; }
+    .modal select { width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+    .alert { padding: 10px; margin: 10px 0; border-radius: 4px; background: #e2e3e5; border: 1px solid #d6d8db; color: #383d41; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Drive Time Logger</h1>
+    <div class="form-group">
+      <label for="startLocation">Start Location</label>
+      <input list="storesList" id="startLocation" placeholder="Start location" autocomplete="off" />
+    </div>
+    <div class="form-group">
+      <label for="endLocation">Destination</label>
+      <input list="storesList" id="endLocation" placeholder="Destination" autocomplete="off" />
+    </div>
+    <datalist id="storesList"></datalist>
+    <div id="timerDisplay">00:00:00</div>
+    <button id="startBtn">Start Trip</button>
+    <button id="pauseBtn" disabled>Pause</button>
+    <button id="endBtn" disabled>End Trip</button>
+    <button id="viewLogsBtn">Toggle Logs View</button>
+    <button id="downloadBtn">Download CSV</button>
+    <button id="loadBtn">Load CSV</button>
+    <button id="resetBtn" style="background: #dc3545;">Reset All Logs</button>
+    <input type="file" id="loadFileInput" accept=".csv" style="display:none" />
+    <div id="sumTotal">Total Drive Today: 0h 0m</div>
+    <div id="statusMessage"></div>
+    <div class="table-container">
+      <table id="logTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Start</th>
+            <th>Destination</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Paused Reason</th>
+            <th>Paused Time</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div id="pauseModal" class="modal-backdrop">
+    <div class="modal">
+      <h3>Trip Paused</h3>
+      <div id="pauseTimerDisplay" style="text-align:center;font-size:1.2rem;font-weight:bold;margin:15px 0;color:#dc3545;">Paused: 00:00:00</div>
+      <label for="pauseReasonSelect">Reason for pause:</label>
+      <select id="pauseReasonSelect">
+        <option>Short Pause</option>
+        <option>Lunch</option>
+        <option>Shopping</option>
+        <option>Thrifting</option>
+        <option>Siesta</option>
+        <option>Gas Stop</option>
+        <option>Other</option>
+      </select>
+      <button id="unpauseBtn">Resume Trip</button>
+    </div>
+  </div>
+
+  <script>
+    // From version6 original file:
+    const storeData = [
+      { week:1, day:'Monday',    name:'Ingles',       address:'499 Weaverville Rd, Asheville' },
+      { week:1, day:'Monday',    name:'Publix',       address:'165 Weaver Blvd, Weaverville' },
+      { week:1, day:'Monday',    name:'Ingles',       address:'140 Weaver Blvd, Weaverville' },
+      { week:1, day:'Monday',    name:'Ingles',       address:'225 Carl Eller Rd, Mars Hill' },
+      { week:1, day:'Monday',    name:'Ingles',       address:'5580 US 25 Hwy, Marshall' },
+      { week:1, day:'Monday',    name:'Ingles',       address:'915 Merrimon Ave, Asheville' },
+      { week:1, day:'Monday',    name:'Sav Mor',       address:'842 Merrimon Ave, Asheville' },
+      { week:1, day:'Tuesday',   name:'Sav Mor',       address:'83 Plaza Loop, Canton' },
+      { week:1, day:'Tuesday',   name:'Ingles',       address:'1678 Brown Ave Ste 1, Waynesville' },
+      { week:1, day:'Tuesday',   name:'Publix',       address:'124 Frazier St, Waynesville' },
+      { week:1, day:'Tuesday',   name:'Ingles',       address:'259 Barber Blvd, Waynesville' },
+      { week:1, day:'Tuesday',   name:'Food Lion',    address:'179 Paragon Pkwy, Clyde' },
+      { week:1, day:'Wednesday', name:'Harris Teeter',address:'136 Merrimon Ave, Asheville' },
+      { week:1, day:'Wednesday', name:'Ingles',       address:'1572 Sand Hill Rd, Candler' },
+      { week:1, day:'Thursday',  name:'Ingles',       address:'29 Tunnel Rd, Asheville' },
+      { week:1, day:'Thursday',  name:'Target',       address:'115 River Hills Rd, Asheville' },
+      { week:1, day:'Friday',    name:'Target',       address:'15 Mckenna Rd, Arden' },
+      { week:1, day:'Friday',    name:'Ingles',       address:'2901 Hendersonville Rd, Fletcher' },
+      { week:1, day:'Friday',    name:'Ingles',       address:'1865 Hendersonville Rd, Asheville' },
+      { week:1, day:'Friday',    name:'Publix',       address:'1830 Hendersonville Rd, Asheville' },
+      { week:1, day:'Friday',    name:'Ingles',       address:'780 Hendersonville Rd, Asheville' },
+      { week:1, day:'Friday',    name:'Speedway',     address:'648 Hendersonville Rd, Asheville' },
+      { week:2, day:'Monday',    name:'Ingles',       address:'3338 Boylston Hwy, Mills River' },
+      { week:2, day:'Monday',    name:'Ingles',       address:'6400 Brevard Rd, Etowah' },
+      { week:2, day:'Monday',    name:'Ingles',       address:'1705 Brevard Rd, Hendersonville' },
+      { week:2, day:'Monday',    name:'Sav Mor',       address:'1047 Fleming St, Hendersonville' },
+      { week:2, day:'Monday',    name:'Ingles',       address:'1980 Asheville Hwy, Hendersonville' },
+      { week:2, day:'Monday',    name:'Ingles',       address:'669 Haywood Rd, Asheville' },
+      { week:2, day:'Tuesday',   name:'Ingles',       address:'301 Long Shoals Rd, Arden' },
+      { week:2, day:'Tuesday',   name:'Publix',       address:'635 Greenville Hwy, Hendersonville' },
+      { week:2, day:'Tuesday',   name:'Speedway',     address:'Spartanburg Hwy, Hendersonville' },
+      { week:2, day:'Tuesday',   name:'Harris Teeter',address:'636 Spartanburg Hwy, Hendersonville' },
+      { week:2, day:'Tuesday',   name:'Ingles',       address:'220 N Highland Lake Rd, Flat Rock' },
+      { week:2, day:'Tuesday',   name:'Ingles',       address:'276 NC 9 Hwy, Lake Lure' },
+      { week:2, day:'Tuesday',   name:'Ingles',       address:'3643 Howard Gap Rd, Hendersonville' },
+      { week:2, day:'Tuesday',   name:'Ingles',       address:'153 Smokey Park Hwy, Asheville' },
+      { week:2, day:'Wednesday', name:'Ingles',       address:'7 Leicester Hwy, Asheville' },
+      { week:2, day:'Wednesday', name:'Ingles',       address:'2575 New Leicester Hwy, Asheville' },
+      { week:2, day:'Thursday',  name:'Target',       address:'15 Mckenna Rd, Arden' },
+      { week:2, day:'Thursday',  name:'Sav Mor',       address:'891 Patton Ave, Asheville' },
+      { week:2, day:'Friday',    name:'Target',       address:'115 River Hills Rd, Asheville' },
+      { week:2, day:'Friday',    name:'Food Lion',    address:'1350 Charlotte Hwy, Fairview' },
+      { week:2, day:'Friday',    name:'Ingles',       address:'225 Charlotte Hwy, Asheville' },
+      { week:2, day:'Friday',    name:'Ingles',       address:'1141 Tunnel Rd, Asheville' }
+    ];
+    const dl = document.getElementById('storesList');
+    storeData.forEach(s => { const o = document.createElement('option'); o.value = `${s.name} — ${s.address}`; dl.appendChild(o); });
+
+    const LOGS_KEY = 'driveTimeLogs';
+    let logs = [];
+    let startTime = null, pauseAccum = 0, pauseStart = null;
+    let timerInterval = null, pauseInterval = null;
+    let isRunning = false, isPaused = false;
+
+    function formatTime(ms) {
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const s = Math.floor((ms % 60000) / 1000);
+      return `${h}h ${m}m`;
+    }
+
+    function updateTimerDisplay() {
+      document.getElementById('timerDisplay').textContent = formatTime(Date.now() - startTime - pauseAccum);
+    }
+
+    document.getElementById('startBtn').onclick = () => {
+      if (isRunning) return;
+      const start = document.getElementById('startLocation').value;
+      const dest = document.getElementById('endLocation').value;
+      if (!start || !dest) return alert('Enter start and destination');
+      isRunning = true;
+      startTime = Date.now();
+      timerInterval = setInterval(updateTimerDisplay, 1000);
+      document.getElementById('pauseBtn').disabled = false;
+      document.getElementById('endBtn').disabled = false;
+      document.getElementById('startBtn').disabled = true;
+    };
+
+    document.getElementById('pauseBtn').onclick = () => {
+      if (!isRunning || isPaused) return;
+      isPaused = true;
+      pauseStart = Date.now();
+      clearInterval(timerInterval);
+      document.getElementById('pauseModal').style.display = 'flex';
+      pauseInterval = setInterval(() => {
+        document.getElementById('pauseTimerDisplay').textContent = formatTime(Date.now() - pauseStart);
+      }, 500);
+    };
+
+    document.getElementById('unpauseBtn').onclick = () => {
+      if (!isPaused) return;
+      isPaused = false;
+      clearInterval(pauseInterval);
+      document.getElementById('pauseModal').style.display = 'none';
+      pauseAccum += Date.now() - pauseStart;
+      timerInterval = setInterval(updateTimerDisplay, 1000);
+    };
+
+    document.getElementById('endBtn').onclick = () => {
+      if (!isRunning) return;
+      clearInterval(timerInterval);
+      isRunning = false;
+      const endTime = Date.now();
+      const totalMs = endTime - startTime - pauseAccum;
+      logs.push({
+        date: new Date().toLocaleDateString(),
+        start: document.getElementById('startLocation').value,
+        dest: document.getElementById('endLocation').value,
+        startTime: new Date(startTime).toLocaleTimeString(),
+        endTime: new Date(endTime).toLocaleTimeString(),
+        pausedReason: '',
+        pausedTime: '',
+        total: formatTime(totalMs)
+      });
+      localStorage.setItem(LOGS_KEY, JSON.stringify(logs));
+      document.getElementById('pauseBtn').disabled = true;
+      document.getElementById('endBtn').disabled = true;
+      document.getElementById('startBtn').disabled = false;
+      renderTable();
+    };
+
+    document.getElementById('viewLogsBtn').onclick = () => {
+      const tc = document.querySelector('.table-container');
+      tc.style.display = tc.style.display === 'none' ? 'block' : 'none';
+      document.getElementById('viewLogsBtn').textContent = tc.style.display === 'none' ? 'Show Logs' : 'Hide Logs';
+    };
+
+    function renderTable() {
+      logs = JSON.parse(localStorage.getItem(LOGS_KEY)) || [];
+      const tbody = document.querySelector('#logTable tbody');
+      tbody.innerHTML = '';
+      logs.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.date}</td><td>${r.start}</td><td>${r.dest}</td><td>${r.startTime}</td><td>${r.endTime}</td><td>${r.pausedReason}</td><td>${r.pausedTime}</td><td>${r.total}</td>`;
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('downloadBtn').onclick = () => {
+      const csvContent = 'Date,Start,Destination,Start Time,End Time,Paused Reason,Paused Time,Total\n' +
+        logs.map(r => `${r.date},${r.start},${r.dest},${r.startTime},${r.endTime},${r.pausedReason},${r.pausedTime},${r.total}`).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `drive-time-logs-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    };
+
+    document.getElementById('loadBtn').onclick = () => document.getElementById('loadFileInput').click();
+    document.getElementById('loadFileInput').addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const lines = reader.result.split('\n').slice(1);
+        logs = lines.filter(l => l).map(l => {
+          const [date,start,dest,startTime,endTime,pausedReason,pausedTime,total] = l.split(',');
+          return { date, start, dest, startTime, endTime, pausedReason, pausedTime, total };
+        });
+        localStorage.setItem(LOGS_KEY, JSON.stringify(logs));
+        renderTable();
+      };
+      reader.readAsText(file);
+    });
+
+    document.getElementById('resetBtn').onclick = () => {
+      if (confirm('This will delete ALL logged trips. Are you sure?')) {
+        localStorage.removeItem(LOGS_KEY);
+        logs = [];
+        renderTable();
+      }
+    };
+
+    window.onload = () => {
+      renderTable();
+      document.querySelector('.table-container').style.display = 'block';
+    };
+  </script>
+</body>
+</html>
