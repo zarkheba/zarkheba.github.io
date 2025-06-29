@@ -58,7 +58,58 @@
       <button id="closePauseModal">Resume Trip</button>
   </div></div>
   <script>
-    const storeData=[{name:'Ingles',address:'499 Weaverville Rd, Asheville'},{name:'Publix',address:'165 Weaver Blvd, Weaverville'}/*...*/];
+    
+    const storeData = [
+      {name:'Ingles',       address:'499 Weaverville Rd, Asheville' },
+      {name:'Publix',       address:'165 Weaver Blvd, Weaverville' },
+      {name:'Ingles',       address:'140 Weaver Blvd, Weaverville' },
+      {name:'Ingles',       address:'225 Carl Eller Rd, Mars Hill' },
+      {name:'Ingles',       address:'5580 US 25 Hwy, Marshall' },
+      {name:'Ingles',       address:'915 Merrimon Ave, Asheville' },
+      {name:'Sav Mor',       address:'842 Merrimon Ave, Asheville' },
+      {name:'Sav Mor',       address:'83 Plaza Loop, Canton' },
+      {name:'Ingles',       address:'1678 Brown Ave Ste 1, Waynesville' },
+      {name:'Publix',       address:'124 Frazier St, Waynesville' },
+      {name:'Ingles',       address:'259 Barber Blvd, Waynesville' },
+      {name:'Food Lion',    address:'179 Paragon Pkwy, Clyde' },
+      {name:'Harris Teeter',address:'136 Merrimon Ave, Asheville' },
+      {name:'Ingles',       address:'1572 Sand Hill Rd, Candler' },
+      {name:'Ingles',       address:'29 Tunnel Rd, Asheville' },
+      {name:'Ingles',       address:'863 Brevard Rd Rd, Asheville' },
+      {name:'Ingles',       address:'100 College Station, Brevard' },
+      {name:'Food Lion',       address:'1210 US 70 W, Marion' },
+      {name:'Food Lion',       address:'73 Asheville Hwy, Sylva' },
+      {name:'Circle K',       address:'3611 Boylston Hwy, Mills River' },
+      {name:'Speedway',       address:'158 Smokey Park Hwy, Asheville' },
+      {name:'Target',       address:'15 Mckenna Rd, Arden' },
+      {name:'Ingles',       address:'2901 Hendersonville Rd, Fletcher' },
+      {name:'Ingles',       address:'1865 Hendersonville Rd, Asheville' },
+      {name:'Publix',       address:'1830 Hendersonville Rd, Asheville' },
+      {name:'Ingles',       address:'780 Hendersonville Rd, Asheville' },
+      {name:'Speedway',     address:'648 Hendersonville Rd, Asheville' },
+      {name:'Ingles',       address:'3338 Boylston Hwy, Mills River' },
+      {name:'Ingles',       address:'6400 Brevard Rd, Etowah' },
+      {name:'Ingles',       address:'1705 Brevard Rd, Hendersonville' },
+      {name:'Sav Mor',       address:'1047 Fleming St, Hendersonville' },
+      {name:'Ingles',       address:'1980 Asheville Hwy, Hendersonville' },
+      {name:'Ingles',       address:'669 Haywood Rd, Asheville' },
+      {name:'Ingles',       address:'301 Long Shoals Rd, Arden' },
+      {name:'Publix',       address:'635 Greenville Hwy, Hendersonville' },
+      {name:'Speedway',     address:'Spartanburg Hwy, Hendersonville' },
+      {name:'Harris Teeter',address:'636 Spartanburg Hwy, Hendersonville' },
+      {name:'Ingles',       address:'220 N Highland Lake Rd, Flat Rock' },
+      {name:'Ingles',       address:'276 NC 9 Hwy, Lake Lure' },
+      {name:'Ingles',       address:'3643 Howard Gap Rd, Hendersonville' },
+      {name:'Ingles',       address:'153 Smokey Park Hwy, Asheville' },
+      {name:'Ingles',       address:'7 Leicester Hwy, Asheville' },
+      {name:'Ingles',       address:'2575 New Leicester Hwy, Asheville' },
+      {name:'Target',       address:'15 Mckenna Rd, Arden' },
+      {name:'Sav Mor',       address:'891 Patton Ave, Asheville' },
+      {name:'Target',       address:'115 River Hills Rd, Asheville' },
+      {name:'Food Lion',    address:'1350 Charlotte Hwy, Fairview' },
+      {name:'Ingles',       address:'225 Charlotte Hwy, Asheville' },
+      {name:'Ingles',       address:'1141 Tunnel Rd, Asheville' }
+ ];
     const dl=document.getElementById('storesList');storeData.forEach(s=>{let o=document.createElement('option');o.value=`${s.name} — ${s.address}`;dl.appendChild(o);});
     const LOGS_KEY='driveTimeLogs';let logs=JSON.parse(localStorage.getItem(LOGS_KEY)||'[]');
     let startTime=0,pauseStart=0,pauseAccum=0;let timerInterval,pauseInterval;let isRunning=false,isPaused=false;
