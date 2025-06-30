@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wages & Mileage Tracker v5</title>
+  <style>
+    body { font-family: sans-serif; margin: 1rem; }
+    .container { display: flex; flex-direction: column; gap: 2rem; }
+    .section { border: 1px solid #ccc; padding: 1rem; border-radius: .5rem; }
+    .inputs { display: flex; flex-direction: column; gap: .5rem; }
+    label { font-size: 1rem; }
+    input { padding: .5rem; font-size: 1rem; }
+    button { padding: .75rem; font-size: 1rem; border: none; border-radius: .5rem; cursor: pointer; margin: .5rem 0; }
+    .totals, .list { margin-top: 1rem; }
+    .totals p, .list p { margin: .25rem 0; }
+    .list-item { margin-left: 1rem; }
+    .confirmation { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: #4caf50; color: #fff; padding: .5rem 1rem; border-radius: .5rem; display: none; }
+    @media (min-width: 600px) { .container { flex-direction: row; } .section { flex: 1; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Wages Section -->
+    <div class="section" id="wages-section">
+      <h2>Daily Wages</h2>
+      <div class="inputs">
+        <label>Date<input type="date" id="wage-date"></label>
+        <label>Amount<input type="number" id="wage-amount" step="0.01" placeholder="0.00"></label>
+      </div>
+      <button id="add-wage">Add Wage</button>
+      <button id="reset-all-wage">Clear All Wages (All Weeks)</button>
+      <div class="list">
+        <strong>This Week Entries:</strong>
+        <div id="wage-list"></div>
+      </div>
+      <div class="totals">
+        <p>This Week Total: $<span id="wage-week-current"></span></p>
+        <p>Last Week Total: $<span id="wage-week-prev"></span></p>
+        <p>2-Week Total: $<span id="wage-two-weeks"></span></p>
+      </div>
+    </div>
+    <!-- Mileage Section -->
+    <div class="section" id="mileage-section">
+      <h2>Mileage Reimbursement</h2>
+      <div class="inputs">
+        <label>Date<input type="date" id="mile-date"></label>
+        <label>Amount<input type="number" id="mile-amount" step="0.01" placeholder="0.00"></label>
+      </div>
+      <button id="add-mile">Add Mileage</button>
+      <button id="reset-all-mile">Clear All Mileage (All Weeks)</button>
+      <div class="list">
+        <strong>This Week Entries:</strong>
+        <div id="mile-list"></div>
+      </div>
+      <div class="totals">
+        <p>This Week Total: $<span id="mile-week-current"></span></p>
+        <p>Last Week Total: $<span id="mile-week-prev"></span></p>
+        <p>2-Week Total: $<span id="mile-two-weeks"></span></p>
+      </div>
+    </div>
+    <!-- Combined Section -->
+    <div class="section" id="combined-section">
+      <h2>Combined Weekly Totals</h2>
+      <button id="reset-current-week">Reset Current Week (All)</button>
+      <div class="list">
+        <strong>This Week Combined Entries:</strong>
+        <div id="combined-list"></div>
+      </div>
+      <div class="totals">
+        <p>This Week Combined: $<span id="combined-week-current"></span></p>
+        <p>Last Week Combined: $<span id="combined-week-prev"></span></p>
+        <p>2-Week Combined: $<span id="combined-two-weeks"></span></p>
+      </div>
+      <button id="export-csv">Save CSV</button>
+      <button id="import-csv">Load CSV</button>
+    </div>
+  </div>
+  <input type="file" id="csv-file" accept=".csv" style="display:none">
+  <div class="confirmation" id="confirmation">Done!</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script>
+    const STORAGE_KEY = 'entries_v5';
+    let entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+
+    // Use local date components to avoid UTC offset issues
+    function getTodayStr() {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    const wageDateInput = document.getElementById('wage-date');
+    const mileDateInput = document.getElementById('mile-date');
+    function resetDateInputs() {
+      const today = getTodayStr();
+      wageDateInput.value = today;
+      mileDateInput.value = today;
+    }
+    resetDateInputs();
+
+    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); }
+    function confirmMsg() { const c = document.getElementById('confirmation'); c.style.display = 'block'; setTimeout(() => c.style.display = 'none', 1500); }
+
+    function getWeekRange(offsetWeeks = 0) {
+      const now = new Date();
+      const day = now.getDay();
+      const diff = (day + 6) % 7;
+      const start = new Date(now);
+      start.setDate(now.getDate() - diff - offsetWeeks * 7);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return { start, end };
+    }
+
+    function sumEntries(type, weekOffset = 0) {
+      const { start, end } = getWeekRange(weekOffset);
+      return entries
+        .filter(e => e.type === type && new Date(e.date) >= start && new Date(e.date) <= end)
+        .reduce((sum, e) => sum + parseFloat(e.amount), 0);
+    }
+
+    function listEntries(type) {
+      const { start, end } = getWeekRange(0);
+      return entries
+        .filter(e => e.type === type && new Date(e.date) >= start && new Date(e.date) <= end)
+        .map(e => `<p class="list-item">${e.date}: $${parseFloat(e.amount).toFixed(2)}</p>`)
+        .join('');
+    }
+
+    function updateAll() {
+      const wCurr = sumEntries('wage', 0), wPrev = sumEntries('wage', 1);
+      const mCurr = sumEntries('mileage', 0), mPrev = sumEntries('mileage', 1);
+      document.getElementById('wage-week-current').textContent = wCurr.toFixed(2);
+      document.getElementById('wage-week-prev').textContent = wPrev.toFixed(2);
+      document.getElementById('wage-two-weeks').textContent = (wCurr + wPrev).toFixed(2);
+      document.getElementById('mile-week-current').textContent = mCurr.toFixed(2);
+      document.getElementById('mile-week-prev').textContent = mPrev.toFixed(2);
+      document.getElementById('mile-two-weeks').textContent = (mCurr + mPrev).toFixed(2);
+      document.getElementById('combined-week-current').textContent = (wCurr + mCurr).toFixed(2);
+      document.getElementById('combined-week-prev').textContent = (wPrev + mPrev).toFixed(2);
+      document.getElementById('combined-two-weeks').textContent = (wCurr + wPrev + mCurr + mPrev).toFixed(2);
+      document.getElementById('wage-list').innerHTML = listEntries('wage') || '<p>No entries</p>';
+      document.getElementById('mile-list').innerHTML = listEntries('mileage') || '<p>No entries</p>';
+      const combined = entries
+        .filter(e => (e.type === 'wage' || e.type === 'mileage') && new Date(e.date) >= getWeekRange(0).start && new Date(e.date) <= getWeekRange(0).end)
+        .map(e => `<p class="list-item">${e.date} (${e.type}): $${parseFloat(e.amount).toFixed(2)}</p>`)
+        .join('');
+      document.getElementById('combined-list').innerHTML = combined || '<p>No entries</p>';
+    }
+
+    document.getElementById('add-wage').onclick = () => {
+      const date = wageDateInput.value;
+      const amount = document.getElementById('wage-amount').value;
+      if (date && amount) {
+        entries.push({ date, amount, type: 'wage' });
+        save(); updateAll(); confirmMsg(); resetDateInputs(); document.getElementById('wage-amount').value = '';
+      }
+    };
+    document.getElementById('add-mile').onclick = () => {
+      const date = mileDateInput.value;
+      const amount = document.getElementById('mile-amount').value;
+      if (date && amount) {
+        entries.push({ date, amount, type: 'mileage' });
+        save(); updateAll(); confirmMsg(); resetDateInputs(); document.getElementById('mile-amount').value = '';
+      }
+    };
+
+    document.getElementById('reset-current-week').onclick = () => {
+      ['wage','mileage'].forEach(type => {
+        const total = sumEntries(type,0).toFixed(2);
+        const { start,end } = getWeekRange(0);
+        entries.push({ date:`${start.toISOString().slice(0,10)} to ${end.toISOString().slice(0,10)}`, amount: total, type:`${type}-summary` });
+        entries = entries.filter(e => !(e.type === type && new Date(e.date) >= start && new Date(e.date) <= end));
+      }); save(); updateAll(); confirmMsg();
+    };
+    document.getElementById('reset-all-wage').onclick = () => { entries = entries.filter(e => e.type !== 'wage' && e.type !== 'wage-summary'); save(); updateAll(); confirmMsg(); };
+    document.getElementById('reset-all-mile').onclick = () => { entries = entries.filter(e => e.type !== 'mileage' && e.type !== 'mileage-summary'); save(); updateAll(); confirmMsg(); };
+
+    const fileInput = document.getElementById('csv-file');
+    document.getElementById('export-csv').onclick = () => {
+      const csv = Papa.unparse(entries);
+      const blob = new Blob([csv],{type:'text/csv'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'tracker_v5.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); confirmMsg();
+    };
+    document.getElementById('import-csv').onclick = () => fileInput.click();
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0]; if(!file) return;
+      const reader = new FileReader(); reader.onload = ev => {
+        const data = Papa.parse(ev.target.result,{header:true}).data;
+        entries = data.map(r => ({ date: r.date, amount: r.amount, type: r.type })); save(); updateAll(); confirmMsg();
+      }; reader.readAsText(file);
+    });
+
+    updateAll();
+  </script>
+</body>
+</html>
