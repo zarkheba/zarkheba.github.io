@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Drive Time Logger</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; margin:0; padding:0; }
+    body { font-family: Arial, sans-serif; background: #f5f5f5; padding: 10px; }
+    .container { max-width:700px; margin:auto; background:#fff; padding:20px; border-radius:8px; }
+    h1 { text-align:center; margin-bottom:1em; }
+    .form-group { margin-bottom:1em; }
+    label { display:block; margin-bottom:0.5em; font-weight:bold; }
+    input[list], input, select { width:100%; padding:8px; font-size:1rem; border:1px solid #ccc; border-radius:4px; }
+    button { width:100%; padding:10px; font-size:1rem; margin:5px 0; border:none; border-radius:4px; background:#007BFF; color:#fff; cursor:pointer; }
+    button:disabled { background:#aaa; cursor:not-allowed; }
+    button:hover:not(:disabled) { background:#0056b3; }
+    #timerDisplay, #pauseTimerDisplay { text-align:center; font-weight:bold; font-size:1.5rem; color:#333; }
+    .alert { padding:10px; margin:10px 0; border-radius:4px; background:#d4edda; border:1px solid #c3e6cb; color:#155724; }
+    .table-container { width:100%; overflow-x:auto; margin-top:1em; border:1px solid #ccc; border-radius:4px; }
+    table { width:100%; border-collapse:collapse; margin:0; }
+    th, td { padding:8px; border:1px solid #ccc; text-align:left; font-size:0.9rem; white-space:nowrap; }
+    th { background:#f0f0f0; }
+    tr.pause-entry { font-style:italic; background:#fff3cd; }
+    .modal-backdrop { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:1000; }
+    .modal { background:#fff; padding:20px; border-radius:8px; width:90%; max-width:400px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Drive Time Logger</h1>
+    <div class="form-group"><label for="startLocation">Start Location</label><input list="storesList" id="startLocation" placeholder="Start location" autocomplete="off" /></div>
+    <div class="form-group"><label for="endLocation">Destination</label><input list="storesList" id="endLocation" placeholder="Destination" autocomplete="off" /></div>
+    <datalist id="storesList"></datalist>
+    <div id="timerDisplay">00:00:00</div>
+    <button id="startBtn">Start Trip</button>
+    <button id="pauseBtn" disabled>Pause</button>
+    <button id="endBtn" disabled>End Trip</button>
+    <button id="viewLogsBtn">Hide Logs</button>
+    <button id="downloadBtn">Download CSV</button>
+    <button id="loadBtn">Load CSV</button>
+    <button id="resetBtn" style="background:#dc3545;">Reset All Logs</button>
+    <input type="file" id="loadFileInput" accept=".csv" style="display:none;" />
+    <div id="sumTotal">Total Drive Today: 0h 0m</div>
+    <div id="statusMessage"></div>
+    <div class="table-container">
+      <table id="logTable">
+        <thead><tr><th>Date</th><th>Start</th><th>Destination</th><th>Start Time</th><th>End Time</th><th>Paused Reason</th><th>Paused Duration</th><th>Total</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div id="pauseModal" class="modal-backdrop"><div class="modal">
+      <h3>Trip Paused</h3>
+      <div id="pauseTimerDisplay">Paused: 00:00:00</div>
+      <label for="pauseReasonSelect">Reason for pause:</label>
+      <select id="pauseReasonSelect"><option>Short Pause</option><option>Lunch</option><option>Shopping</option><option>Thrifting</option><option>Siesta</option><option>Gas Stop</option><option>Other</option></select>
+      <button id="closePauseModal">Resume Trip</button>
+  </div></div>
+  <script>
+    
+    const storeData = [
+      {name:'Ingles',       address:'499 Weaverville Rd, Asheville' },
+      {name:'Publix',       address:'165 Weaver Blvd, Weaverville' },
+      {name:'Ingles',       address:'140 Weaver Blvd, Weaverville' },
+      {name:'Ingles',       address:'225 Carl Eller Rd, Mars Hill' },
+      {name:'Ingles',       address:'5580 US 25 Hwy, Marshall' },
+      {name:'Ingles',       address:'915 Merrimon Ave, Asheville' },
+      {name:'Sav Mor',       address:'842 Merrimon Ave, Asheville' },
+      {name:'Sav Mor',       address:'83 Plaza Loop, Canton' },
+      {name:'Ingles',       address:'1678 Brown Ave Ste 1, Waynesville' },
+      {name:'Publix',       address:'124 Frazier St, Waynesville' },
+      {name:'Ingles',       address:'259 Barber Blvd, Waynesville' },
+      {name:'Food Lion',    address:'179 Paragon Pkwy, Clyde' },
+      {name:'Harris Teeter',address:'136 Merrimon Ave, Asheville' },
+      {name:'Ingles',       address:'1572 Sand Hill Rd, Candler' },
+      {name:'Ingles',       address:'29 Tunnel Rd, Asheville' },
+      {name:'Ingles',       address:'863 Brevard Rd Rd, Asheville' },
+      {name:'Ingles',       address:'100 College Station, Brevard' },
+      {name:'Food Lion',       address:'1210 US 70 W, Marion' },
+      {name:'Food Lion',       address:'73 Asheville Hwy, Sylva' },
+      {name:'Circle K',       address:'3611 Boylston Hwy, Mills River' },
+      {name:'Speedway',       address:'158 Smokey Park Hwy, Asheville' },
+      {name:'Target',       address:'15 Mckenna Rd, Arden' },
+      {name:'Ingles',       address:'2901 Hendersonville Rd, Fletcher' },
+      {name:'Ingles',       address:'1865 Hendersonville Rd, Asheville' },
+      {name:'Publix',       address:'1830 Hendersonville Rd, Asheville' },
+      {name:'Ingles',       address:'780 Hendersonville Rd, Asheville' },
+      {name:'Speedway',     address:'648 Hendersonville Rd, Asheville' },
+      {name:'Ingles',       address:'3338 Boylston Hwy, Mills River' },
+      {name:'Ingles',       address:'6400 Brevard Rd, Etowah' },
+      {name:'Ingles',       address:'1705 Brevard Rd, Hendersonville' },
+      {name:'Sav Mor',       address:'1047 Fleming St, Hendersonville' },
+      {name:'Ingles',       address:'1980 Asheville Hwy, Hendersonville' },
+      {name:'Ingles',       address:'669 Haywood Rd, Asheville' },
+      {name:'Ingles',       address:'301 Long Shoals Rd, Arden' },
+      {name:'Publix',       address:'635 Greenville Hwy, Hendersonville' },
+      {name:'Speedway',     address:'Spartanburg Hwy, Hendersonville' },
+      {name:'Harris Teeter',address:'636 Spartanburg Hwy, Hendersonville' },
+      {name:'Ingles',       address:'220 N Highland Lake Rd, Flat Rock' },
+      {name:'Ingles',       address:'276 NC 9 Hwy, Lake Lure' },
+      {name:'Ingles',       address:'3643 Howard Gap Rd, Hendersonville' },
+      {name:'Ingles',       address:'153 Smokey Park Hwy, Asheville' },
+      {name:'Ingles',       address:'7 Leicester Hwy, Asheville' },
+      {name:'Ingles',       address:'2575 New Leicester Hwy, Asheville' },
+      {name:'Target',       address:'15 Mckenna Rd, Arden' },
+      {name:'Sav Mor',       address:'891 Patton Ave, Asheville' },
+      {name:'Target',       address:'115 River Hills Rd, Asheville' },
+      {name:'Food Lion',    address:'1350 Charlotte Hwy, Fairview' },
+      {name:'Ingles',       address:'225 Charlotte Hwy, Asheville' },
+      {name:'Ingles',       address:'1141 Tunnel Rd, Asheville' }
+ ];
+
+    // Helper function to parse CSV line properly - simplified version
+    function parseCSVLine(line) {
+      const result = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++; // skip next quote
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          result.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      
+      result.push(current);
+      return result;
+    }
+
+    const dl=document.getElementById('storesList');storeData.forEach(s=>{let o=document.createElement('option');o.value=`${s.name} — ${s.address}`;dl.appendChild(o);});
+    
+    // Storage keys
+    const LOGS_KEY='driveTimeLogs';
+    const STATE_KEY='driveTimeState';
+    
+    let logs=JSON.parse(localStorage.getItem(LOGS_KEY)||'[]');
+    let startTime=0,pauseStart=0,pauseAccum=0;let timerInterval,pauseInterval;let isRunning=false,isPaused=false;
+    
+    // Persistent state management
+    function saveState() {
+      const state = {
+        isRunning,
+        isPaused,
+        startTime,
+        pauseStart,
+        pauseAccum,
+        startLocation: document.getElementById('startLocation').value,
+        endLocation: document.getElementById('endLocation').value,
+        pauseReason: document.getElementById('pauseReasonSelect').value
+      };
+      localStorage.setItem(STATE_KEY, JSON.stringify(state));
+    }
+    
+    function loadState() {
+      const saved = localStorage.getItem(STATE_KEY);
+      if (!saved) return;
+      
+      const state = JSON.parse(saved);
+      isRunning = state.isRunning;
+      isPaused = state.isPaused;
+      startTime = state.startTime;
+      pauseStart = state.pauseStart;
+      pauseAccum = state.pauseAccum;
+      
+      // Restore form values
+      document.getElementById('startLocation').value = state.startLocation || '';
+      document.getElementById('endLocation').value = state.endLocation || '';
+      document.getElementById('pauseReasonSelect').value = state.pauseReason || 'Short Pause';
+      
+      // Restore UI state
+      if (isRunning) {
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('pauseBtn').disabled = false;
+        document.getElementById('endBtn').disabled = false;
+        
+        if (isPaused) {
+          // Resume pause modal and timer
+          document.getElementById('pauseModal').style.display = 'flex';
+          pauseInterval = setInterval(() => {
+            document.getElementById('pauseTimerDisplay').textContent = 'Paused: ' + formatTimerDetailed(Date.now() - pauseStart);
+          }, 500);
+        } else {
+          // Resume main timer
+          timerInterval = setInterval(() => {
+            document.getElementById('timerDisplay').textContent = formatTimerDetailed(Date.now() - startTime - pauseAccum);
+          }, 500);
+        }
+      }
+    }
+    
+    function clearState() {
+      localStorage.removeItem(STATE_KEY);
+    }
+    
+    function formatTimerDetailed(ms){const h=Math.floor(ms/3600000),m=Math.floor((ms%3600000)/60000),s=Math.floor((ms%60000)/1000);return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;}
+    function formatTimer(ms){
+  const totalSec=Math.floor(ms/1000);
+  const remainderSec = totalSec % 60;
+  let adjustedSec = totalSec;
+  
+  // If seconds are over 30, round up to next minute
+  if(remainderSec > 30) {
+    adjustedSec = totalSec + (60 - remainderSec);
+  }
+  
+  const h=Math.floor(adjustedSec/3600);
+  const m=Math.floor((adjustedSec%3600)/60);
+  return`${h}h ${m}m`;
+}
+    function updateSum(){const today=new Date().toLocaleDateString();const totalMs=logs.filter(l=>!l.isPause&&l.date===today).reduce((a,l)=>a+l.ms,0);document.getElementById('sumTotal').textContent='Total Drive Today: '+formatTimer(totalMs);}
+    function showStatus(msg,err=false){const d=document.getElementById('statusMessage');d.innerHTML=`<div class="alert" style="background:${err?'#f8d7da':'#d4edda'};border:1px solid ${err?'#f5c6cb':'#c3e6cb'};color:${err?'#721c24':'#155724'};">${msg}</div>`;setTimeout(()=>d.innerHTML='',3000);}
+    function renderTable(){const tb=document.querySelector('#logTable tbody');tb.innerHTML='';logs.forEach(r=>{let tr=document.createElement('tr');if(r.isPause){tr.classList.add('pause-entry');}tr.innerHTML=`<td>${r.date}</td><td>${r.start||''}</td><td>${r.dest||''}</td><td>${r.startTime||''}</td><td>${r.endTime||''}</td><td>${r.pausedReason||''}</td><td>${r.pausedTime||''}</td><td>${formatTimer(r.ms)}</td>`;tb.appendChild(tr);});updateSum();}
+    
+    document.getElementById('startBtn').onclick=()=>{
+      if(isRunning)return;
+      const s=document.getElementById('startLocation').value,e=document.getElementById('endLocation').value;
+      if(!s||!e){showStatus('Enter both locations',true);return;}
+      
+      isRunning=true;isPaused=false;pauseAccum=0;startTime=Date.now();
+      document.getElementById('pauseBtn').disabled=false;
+      document.getElementById('endBtn').disabled=false;
+      document.getElementById('startBtn').disabled=true;
+      document.getElementById('timerDisplay').textContent='00:00:00';
+      
+      timerInterval=setInterval(()=>{
+        document.getElementById('timerDisplay').textContent=formatTimerDetailed(Date.now()-startTime-pauseAccum);
+      },500);
+      
+      saveState();
+    };
+    
+    document.getElementById('pauseBtn').onclick=()=>{
+      if(!isRunning||isPaused)return;
+      isPaused=true;pauseStart=Date.now();
+      clearInterval(timerInterval);
+      document.getElementById('pauseModal').style.display='flex';
+      
+      pauseInterval=setInterval(()=>{
+        document.getElementById('pauseTimerDisplay').textContent='Paused: '+formatTimerDetailed(Date.now()-pauseStart);
+      },500);
+      
+      saveState();
+    };
+    
+    document.getElementById('closePauseModal').onclick=()=>{
+      clearInterval(pauseInterval);
+      const pausedMs=Date.now()-pauseStart;
+      pauseAccum+=pausedMs;
+      
+      logs.push({isPause:true,date:new Date().toLocaleDateString(),pausedReason:document.getElementById('pauseReasonSelect').value,pausedTime:formatTimerDetailed(pausedMs),ms:0});
+      localStorage.setItem(LOGS_KEY,JSON.stringify(logs));
+      renderTable();
+      
+      isPaused=false;
+      document.getElementById('pauseModal').style.display='none';
+      
+      timerInterval=setInterval(()=>{
+        document.getElementById('timerDisplay').textContent=formatTimerDetailed(Date.now()-startTime-pauseAccum);
+      },500);
+      
+      saveState();
+    };
+    
+    document.getElementById('endBtn').onclick=()=>{
+      if(!isRunning)return;
+      clearInterval(timerInterval);
+      if(isPaused){clearInterval(pauseInterval);document.getElementById('pauseModal').style.display='none';}
+      
+      isRunning=false;isPaused=false;
+      const endTs=Date.now();
+      const ms=endTs-startTime-pauseAccum;
+      
+      logs.push({isPause:false,date:new Date().toLocaleDateString(),start:document.getElementById('startLocation').value,dest:document.getElementById('endLocation').value,startTime:new Date(startTime).toLocaleTimeString(),endTime:new Date(endTs).toLocaleTimeString(),pausedReason:'',pausedTime:'',ms});
+      localStorage.setItem(LOGS_KEY,JSON.stringify(logs));
+      
+      document.getElementById('pauseBtn').disabled=true;
+      document.getElementById('endBtn').disabled=true;
+      document.getElementById('startBtn').disabled=false;
+      renderTable();
+      
+      clearState(); // Clear persistent state when trip ends
+    };
+    
+    document.getElementById('viewLogsBtn').onclick=()=>{const tc=document.querySelector('.table-container');tc.style.display=tc.style.display==='none'?'block':'none';document.getElementById('viewLogsBtn').textContent=tc.style.display==='none'?'Show Logs':'Hide Logs';};
+    
+    document.getElementById('downloadBtn').onclick=()=>{const csv='Date,Start,Destination,Start Time,End Time,Paused Reason,Paused Duration,Total\n'+logs.map(r=>`"${(r.date||'').replace(/"/g,'""')}","${(r.start||'').replace(/"/g,'""')}","${(r.dest||'').replace(/"/g,'""')}","${(r.startTime||'').replace(/"/g,'""')}","${(r.endTime||'').replace(/"/g,'""')}","${(r.pausedReason||'').replace(/"/g,'""')}","${(r.pausedTime||'').replace(/"/g,'""')}",${r.ms||0}`).join('\n');const fn=`drive-time-logs-${new Date().toISOString().split('T')[0]}.csv`;if(navigator.canShare&&navigator.canShare({files:[new File([csv],fn,{type:'text/csv'})]})){navigator.share({files:[new File([csv],fn,{type:'text/csv'})]});}else{const b=new Blob([csv],{type:'text/csv'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);}};
+    
+    document.getElementById('loadBtn').onclick=()=>document.getElementById('loadFileInput').click();
+    
+    // Fixed CSV loading with proper parsing
+    document.getElementById('loadFileInput').addEventListener('change',e=>{
+      const f=e.target.files[0];if(!f)return;
+      const r=new FileReader();
+      r.onload=()=>{
+        const lines=r.result.split('\n').slice(1); // Skip header
+        logs=lines.filter(l=>l.trim()).map(line=>{
+          const [date,start,dest,st,et,pr,pt,ms] = parseCSVLine(line);
+          return{
+            isPause: (start === '' && dest === ''), // Detect pause entries
+            date: date || '',
+            start: start || '',
+            dest: dest || '',
+            startTime: st || '',
+            endTime: et || '',
+            pausedReason: pr || '',
+            pausedTime: pt || '',
+            ms: parseInt(ms) || 0
+          };
+        });
+        localStorage.setItem(LOGS_KEY,JSON.stringify(logs));
+        renderTable();
+        showStatus('CSV loaded successfully',false);
+      };
+      r.readAsText(f);
+      e.target.value='';
+    });
+    
+    document.getElementById('resetBtn').onclick=()=>{
+      if(confirm('Delete all logs?')){
+        localStorage.removeItem(LOGS_KEY);
+        clearState(); // Also clear any active timer state
+        logs=[];
+        
+        // Reset UI to initial state
+        isRunning=false;isPaused=false;
+        clearInterval(timerInterval);
+        clearInterval(pauseInterval);
+        document.getElementById('pauseModal').style.display='none';
+        document.getElementById('startBtn').disabled=false;
+        document.getElementById('pauseBtn').disabled=true;
+        document.getElementById('endBtn').disabled=true;
+        document.getElementById('timerDisplay').textContent='00:00:00';
+        document.getElementById('startLocation').value='';
+        document.getElementById('endLocation').value='';
+        
+        renderTable();
+      }
+    };
+    
+    // Auto-save state when form fields change
+    document.getElementById('startLocation').addEventListener('input', saveState);
+    document.getElementById('endLocation').addEventListener('input', saveState);
+    document.getElementById('pauseReasonSelect').addEventListener('change', saveState);
+    
+    window.onload=()=>{
+      renderTable();
+      loadState(); // Restore any saved timer state
+    };
+  </script>
+</body>
+</html>
