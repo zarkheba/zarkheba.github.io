@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi To-Do List Dashboard</title>
+  <style>
+    :root { --bg-color: #121212; --text-color: #ffffff; --module-bg: #1e1e1e; --item-bg: #3a3a3a; --item-list-bg: #292929; --link-color: #4ea1ff; }
+    body.light-mode { --bg-color: #e8e8e8; --text-color: #111111; --module-bg: #dddddd; --item-bg: #cccccc; --item-list-bg: #e0e0e0; --link-color: #0066cc; }
+    body { margin:0; padding:0; font-family:Arial,sans-serif; background:var(--bg-color); color:var(--text-color); overflow:hidden; }
+    a { color:var(--link-color); text-decoration:none; }
+    #modules-container { position:absolute; top:0; left:0; width:100%; height:100%; overflow:visible; }
+    .module { position:absolute; width:300px; background:var(--module-bg); border-radius:8px; padding:8px; box-sizing:border-box; }
+    .module-header { display:flex; align-items:center; cursor:move; }
+    .module-header h2 { flex:1; margin:0; outline:none; font-size:1em; }
+    .module-header h2[contenteditable] { border-bottom:1px dashed #888; }
+    .module-header button, .module-header input[type=color] { background:transparent; border:none; color:var(--text-color); cursor:pointer; margin-left:4px; padding:2px; font-size:0.9em; }
+    .module-body { margin-top:8px; }
+    .module input[type=text] { width:100%; padding:4px; box-sizing:border-box; background:var(--item-list-bg); color:var(--text-color); border:1px solid #444; }
+    .module ul { list-style:none; margin:8px 0 0; padding:0; background:var(--item-list-bg); border-radius:4px; min-height:24px; }
+    .module li { display:flex; justify-content:space-between; align-items:center; padding:6px; margin:4px; background:var(--item-bg); border-radius:4px; cursor:grab; color:var(--text-color); }
+    .module li.dragging { opacity:0.5; }
+    .remove-btn { font-size:0.8em; color:red; cursor:pointer; }
+    #controls { position:fixed; bottom:16px; right:16px; z-index:100; }
+    #controls button { margin:4px; padding:6px 12px; font-size:0.9em; }
+    #moduleMenu, #layoutMenu { position:absolute; display:none; flex-direction:column; background:var(--module-bg); border:1px solid #888; border-radius:6px; z-index:200; width:140px; }
+    #moduleMenu button, #layoutMenu button { background:transparent; border:none; color:var(--text-color); padding:6px; text-align:left; font-size:0.9em; }
+    #moduleMenu button:hover, #layoutMenu button:hover { background:var(--item-list-bg); }
+    #confirmModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--module-bg); color:var(--text-color); padding:16px; border-radius:6px; box-shadow:0 0 8px rgba(0,0,0,0.5); z-index:300; }
+    #confirmModal p { margin:0 0 12px; }
+    #confirmModal button { margin:0 6px; padding:4px 8px; }
+  </style>
+</head>
+<body>
+  <div id="modules-container"></div>
+  <div id="controls">
+    <button id="saveBtn">Save</button>
+    <button id="loadBtn">Load</button>
+    <button id="layoutsBtn">Layouts</button>
+    <button id="addModuleBtn">Add Module</button>
+    <button id="themeToggle">Theme</button>
+    <input type="file" id="fileInput" accept=".json" style="display:none" />
+  </div>
+  <div id="moduleMenu"><button data-type="ToDo">To-Do</button><button data-type="LinkList">Links</button></div>
+  <div id="layoutMenu"></div>
+  <div id="confirmModal"><p id="confirmMessage"></p><button id="confirmYes">Yes</button><button id="confirmNo">No</button></div>
+  <script>
+    let modules = JSON.parse(localStorage.getItem('dashboardModules')||'[]');
+    const layouts = JSON.parse(localStorage.getItem('dashboardLayouts')||'{}');
+    const save = ()=>localStorage.setItem('dashboardModules',JSON.stringify(modules));
+    const saveLayouts = ()=>localStorage.setItem('dashboardLayouts',JSON.stringify(layouts));
+    modules = modules.map(m=>({title:m.title||m.type,...m}));
+
+    const confirmModal = document.getElementById('confirmModal'), confirmMessage = document.getElementById('confirmMessage'); let confirmCallback;
+    function showConfirm(msg, cb) { confirmMessage.textContent = msg; confirmModal.style.display = 'block'; confirmCallback = cb; }
+    document.getElementById('confirmYes').onclick = ()=>{ confirmModal.style.display='none'; confirmCallback(true); };
+    document.getElementById('confirmNo').onclick = ()=>{ confirmModal.style.display='none'; confirmCallback(false); };
+
+    function toggleMenu(id, btn) {
+      const m = document.getElementById(id);
+      if (m.style.display==='flex') m.style.display='none';
+      else {
+        const rect = btn.getBoundingClientRect();
+        m.style.left = rect.left + 'px';
+        m.style.bottom = (window.innerHeight - rect.top) + 'px';
+        m.style.display='flex';
+      }
+    }
+
+    document.getElementById('addModuleBtn').onclick = ()=>toggleMenu('moduleMenu', document.getElementById('addModuleBtn'));
+    document.getElementById('moduleMenu').onclick = e=>{
+      const type = e.target.dataset.type;
+      if (!type) return;
+      modules.push({ type, title: type, items: [], x:50+modules.length*30, y:50+modules.length*30, collapsed:false, locked:false, color:null });
+      save(); render(); document.getElementById('moduleMenu').style.display='none';
+    };
+
+    document.getElementById('layoutsBtn').onclick = ()=>{
+      const lm = document.getElementById('layoutMenu');
+      if (lm.style.display==='flex') { lm.style.display='none'; return; }
+      lm.innerHTML = '';
+      const sb = document.createElement('button'); sb.textContent='Save Layout'; sb.onclick=()=>{ const n=prompt('Name:'); if(n){ layouts[n]=JSON.parse(JSON.stringify(modules)); saveLayouts(); alert('Saved'); }};
+      lm.append(sb);
+      Object.keys(layouts).forEach(n=>{
+        const div = document.createElement('div'); div.style.display='flex'; div.style.justifyContent='space-between';
+        const b = document.createElement('button'); b.textContent = n; b.onclick=()=>{ modules=JSON.parse(JSON.stringify(layouts[n])); save(); render(); };
+        const x = document.createElement('button'); x.textContent='✖'; x.onclick=()=>showConfirm(`Delete "${n}"?`,ok=>{ if(ok){ delete layouts[n]; saveLayouts(); render(); document.getElementById('layoutsBtn').click(); }});
+        div.append(b,x); lm.append(div);
+      });
+      toggleMenu('layoutMenu', document.getElementById('layoutsBtn'));
+    };
+
+    document.getElementById('saveBtn').onclick = async()=>{ const data=JSON.stringify(modules,null,2);
+      if(window.showSaveFilePicker){ try{ const h=await showSaveFilePicker({types:[{description:'JSON',accept:{'application/json':['.json']}}]}); const w=await h.createWritable(); await w.write(data); await w.close(); }catch{} }
+      else{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([data],{type:'application/json'})); a.download='dashboard.json'; a.click(); }
+    };
+
+    document.getElementById('loadBtn').onclick = ()=>document.getElementById('fileInput').click();
+    document.getElementById('fileInput').onchange = e=>{ const f=e.target.files[0], r=new FileReader(); r.onload=()=>{ modules=JSON.parse(r.result); save(); render(); }; r.readAsText(f); };
+    document.getElementById('themeToggle').onclick = ()=>{ document.body.classList.toggle('light-mode'); localStorage.setItem('theme', document.body.classList.contains('light-mode')?'light':'dark'); };
+    if(localStorage.getItem('theme')==='light') document.body.classList.add('light-mode');
+
+    let dragEl=null, origIdx=null;
+    document.addEventListener('dragstart', e=>{ const li=e.target.closest('li'); if(li){ dragEl=li; origIdx=+li.closest('.module').dataset.idx; li.classList.add('dragging'); } const mh=e.target.closest('.module-header'); if(mh){ dragEl=mh.closest('.module'); dragEl.classList.add('dragging'); }});
+    document.addEventListener('dragend', ()=>{ if(dragEl){ dragEl.classList.remove('dragging'); dragEl=null; origIdx=null; save(); }});
+    document.addEventListener('dragover', e=>e.preventDefault());
+    document.addEventListener('drop', e=>{ if(!dragEl) return; const ul=e.target.closest('ul'); if(dragEl.tagName==='LI' && ul){ const toIdx=+ul.closest('.module').dataset.idx; const fm=modules[origIdx], tm=modules[toIdx]; if(fm.type!==tm.type) return; const data=JSON.parse(dragEl.dataset.value); fm.items=fm.items.filter(i=>JSON.stringify(i)!==JSON.stringify(data)); let ins=false; Array.from(ul.children).forEach((el,i)=>{ if(!ins){ const r=el.getBoundingClientRect(); if(e.clientY<r.top+r.height/2){ tm.items.splice(i,0,data); ins=true; } }}); if(!ins) tm.items.push(data); render(); } else if(dragEl.classList.contains('module')){ const rc=document.getElementById('modules-container').getBoundingClientRect(), idx=+dragEl.dataset.idx; modules[idx].x=e.clientX-rc.left-150; modules[idx].y=e.clientY-rc.top-12; render(); }});
+
+    function render(){ const c=document.getElementById('modules-container'); c.innerHTML=''; modules.forEach((m,i)=>{ const mod=document.createElement('div'); mod.className='module'; mod.dataset.idx=i; mod.style.left=m.x+'px'; mod.style.top=m.y+'px'; if(m.color) mod.style.background=m.color; if(m.collapsed) mod.classList.add('collapsed'); mod.draggable=!m.locked; const hdr=document.createElement('div'); hdr.className='module-header'; hdr.draggable=!m.locked; const t=document.createElement('h2'); t.contentEditable=!m.locked; t.textContent=m.title; t.onblur=()=>{ m.title=t.textContent; save(); }; const cb=document.createElement('button'); cb.textContent=m.collapsed?'▸':'▾'; cb.onclick=()=>{ m.collapsed=!m.collapsed; save(); render(); }; const lb=document.createElement('button'); lb.textContent=m.locked?'🔒':'🔓'; lb.onclick=()=>{ m.locked=!m.locked; save(); render(); }; const ci=document.createElement('input'); ci.type='color'; ci.value=m.color||'#1e1e1e'; ci.oninput=e=>{ m.color=e.target.value; save(); render(); }; const rb=document.createElement('button'); rb.textContent='✖'; rb.onclick=()=>showConfirm('Delete module?',ok=>{ if(ok){ modules.splice(i,1); save(); render(); }}); hdr.append(t,cb,lb,ci,rb); const bd=document.createElement('div'); bd.className='module-body'; if(m.type==='ToDo'||m.type==='LinkList'){ const inp=document.createElement('input'); inp.placeholder=m.type==='ToDo'?'Add to-do...':'Add link...'; inp.disabled=m.locked; inp.onkeypress=e=>{ if(e.key==='Enter'&&inp.value){ const v=m.type==='LinkList'?{url:inp.value,text:inp.value}:inp.value; m.items.push(v); inp.value=''; save(); render(); }}; const ul=document.createElement('ul'); m.items.forEach(it=>{ const li=document.createElement('li'); li.draggable=!m.locked; li.dataset.value=JSON.stringify(it); if(m.type==='LinkList'){ const a=document.createElement('a'); a.href=it.url; a.textContent=it.text; a.target='_blank'; li.append(a);} else li.textContent=it; const db=document.createElement('span'); db.className='remove-btn'; db.textContent='✖'; db.onclick=()=>showConfirm('Delete item?',ok=>{ if(ok){ m.items.splice(m.items.findIndex(x=>JSON.stringify(x)===JSON.stringify(it)),1); save(); render(); }}); li.append(db); ul.append(li); }); bd.append(inp,ul);} mod.append(hdr,bd); c.append(mod); }); }
+    render();
+  </script>
+</body>
+</html>
