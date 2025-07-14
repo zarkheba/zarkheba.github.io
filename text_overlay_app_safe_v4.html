@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safe Text Overlay App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+           background: #f0f0f0; display: flex; justify-content: center; }
+    .app-container {
+      background: white; border: 2px solid #333; border-radius: 8px; margin: 1em; padding: 1em;
+      width: 100%; max-width: 600px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      display: flex; flex-direction: column; gap: 0.75em;
+    }
+    .controls { display: flex; flex-direction: column; gap: 0.5em; }
+    canvas { width: 100%; height: auto; border: 1px solid #ccc; border-radius: 4px; }
+    input, select, button {
+      padding: 0.5em; font-size: 1em; border-radius: 4px; border: 1px solid #ccc;
+    }
+    button { background: #007bff; color: white; border: none; }
+    button:disabled { background: #999; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="controls">
+      <label>Select Image: <input type="file" id="imageInput" accept="image/*"></label>
+      <label>Select Text:
+        <select id="textSelect">
+          <option value="Hello World">Hello World</option>
+          <option value="Sample Text">Sample Text</option>
+          <option value="Overlay">Overlay</option>
+          <option value="Custom">Custom...</option>
+        </select>
+      </label>
+      <input type="text" id="customText" placeholder="Enter custom text" style="display:none;">
+      <button id="applyBtn" disabled>Apply</button>
+      <button id="saveBtn" disabled>Save / Share</button>
+    </div>
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <script>
+    const MAX_WIDTH = 1600, MAX_HEIGHT = 1200, MAX_PIXELS = 500000;
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const imageInput = document.getElementById('imageInput');
+    const textSelect = document.getElementById('textSelect');
+    const customText = document.getElementById('customText');
+    const applyBtn = document.getElementById('applyBtn');
+    const saveBtn = document.getElementById('saveBtn');
+
+    let imgBitmap = null;
+
+    imageInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      try {
+        const imgURL = URL.createObjectURL(file);
+        const rawImg = new Image();
+        rawImg.onload = () => {
+          // Safely downscale BEFORE drawing
+          let [w, h] = [rawImg.width, rawImg.height];
+          const scale = Math.min(MAX_WIDTH / w, MAX_HEIGHT / h, 1);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+          canvas.width = w;
+          canvas.height = h;
+          ctx.clearRect(0, 0, w, h);
+          ctx.drawImage(rawImg, 0, 0, w, h);
+          imgBitmap = ctx.getImageData(0, 0, w, h); // preserve background for redrawing
+          applyBtn.disabled = false;
+          saveBtn.disabled = false;
+          URL.revokeObjectURL(imgURL);
+        };
+        rawImg.src = imgURL;
+      } catch (err) {
+        alert("Image failed to load. Try a smaller one.");
+        console.error(err);
+      }
+    });
+
+    textSelect.addEventListener('change', () => {
+      customText.style.display = textSelect.value === 'Custom' ? 'block' : 'none';
+    });
+
+    applyBtn.addEventListener('click', () => {
+      if (!imgBitmap) return;
+      ctx.putImageData(imgBitmap, 0, 0);
+      const text = textSelect.value === 'Custom' ? customText.value : textSelect.value;
+      const fontSize = Math.floor(canvas.width / 12);
+      ctx.font = fontSize + 'px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'white';
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = 2;
+      const x = canvas.width / 2;
+      const y = canvas.height - fontSize * 0.6;
+      ctx.strokeText(text, x, y);
+      ctx.fillText(text, x, y);
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      const scale = Math.min(1, Math.sqrt(MAX_PIXELS / (canvas.width * canvas.height)));
+      const outW = Math.round(canvas.width * scale);
+      const outH = Math.round(canvas.height * scale);
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = outW;
+      outCanvas.height = outH;
+      outCanvas.getContext('2d').drawImage(canvas, 0, 0, outW, outH);
+      outCanvas.toBlob(async (blob) => {
+        const file = new File([blob], 'Tagged.jpg', { type: 'image/jpeg' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: 'Tagged Image', text: 'Tagged image file' });
+            return;
+          } catch (err) { /* fallback if canceled */ }
+        }
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      }, 'image/jpeg', 0.9);
+    });
+  </script>
+</body>
+</html>
