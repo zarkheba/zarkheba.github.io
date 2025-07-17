@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Command Center Dashboard</title>
+
+<!-- InteractJS -->
+<script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+
+<style>
+/* ---------- THEME ---------- */
+:root{
+  --accent:#1c86ee; --bg:#0b132b; --bg-light:#1d2d44; --bg-dark:#162b3d;
+  --text:#ffffff; --radius:12px; --shadow:0 4px 10px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Roboto,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);}
+button,select{font-family:inherit;}
+/* ---------- HEADER ---------- */
+header{
+  background:linear-gradient(90deg,#1c2541,#3a506b);
+  padding:.5rem .8rem;display:flex;align-items:center;gap:.75rem;
+  font-size:.85rem;text-transform:uppercase;box-shadow:var(--shadow);
+}
+header h4{flex:1;font-weight:600;letter-spacing:.06em;}
+header button,header select{
+  border:none;border-radius:4px;background:var(--accent);color:var(--text);
+  padding:.4rem .7rem;cursor:pointer;
+}
+header button:hover{filter:brightness(1.1);}
+/* ---------- DASHBOARD CONTAINER ---------- */
+#dashboard{position:relative;min-height:calc(100vh - 52px);}
+/* ---------- WIDGET SHELL ---------- */
+.widget{
+  position:absolute;min-width:240px;min-height:140px;
+  background:linear-gradient(145deg,var(--bg-light),var(--bg-dark));
+  border:1px solid var(--accent);border-radius:var(--radius);
+  box-shadow:var(--shadow),inset 0 0 15px rgba(0,134,238,.5);
+  display:flex;flex-direction:column;
+}
+.widget.collapsed{height:auto!important;}
+/* Header */
+.widget-header{
+  display:flex;justify-content:space-between;align-items:center;
+  background:rgba(0,0,0,.25);padding:.45rem .65rem;cursor:move;
+  border-top-left-radius:var(--radius);border-top-right-radius:var(--radius);
+  user-select:none;
+}
+.widget-header h2{margin:0;font-size:1rem;color:var(--accent);text-shadow:0 0 4px var(--accent);}
+.widget-header h2[contenteditable]{outline:1px dashed var(--accent);}
+.widget-controls button{
+  background:none;border:none;color:var(--accent);font-size:.9rem;padding:0 .2rem;cursor:pointer;
+}
+.widget-controls button:hover{color:#ff6b6b;}
+/* Content */
+.widget-content{flex:1;padding:.6rem;overflow:auto;}
+.widget.collapsed .widget-content{display:none;}
+/* Special modules */
+#datetime-widget .widget-content{display:flex;flex-direction:column;align-items:center;justify-content:center;}
+#datetime-widget #time-display{font-family:'Digital-7 Mono',monospace;font-size:2em;color:var(--accent);}
+#datetime-widget #day-display,#datetime-widget #date-display{font-size:.9em;color:var(--accent);}
+ul{list-style:none;padding:0;margin:0;}
+.list-item{display:flex;align-items:center;justify-content:space-between;padding:.35rem;border-bottom:1px solid var(--accent);}
+.list-item:last-child{border-bottom:none;}
+.list-item button{background:none;border:none;color:#ff6b6b;cursor:pointer;}
+#design-list-widget input,#todo-widget input{
+  width:100%;padding:.45rem;border-radius:4px;border:1px solid var(--accent);
+  background:var(--bg-dark);color:var(--text);margin-bottom:.45rem;
+}
+/* ---------- ADD MODULE OVERLAY ---------- */
+#add-module-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;
+  align-items:center;justify-content:center;z-index:10000;
+}
+#add-module-overlay .panel{
+  background:var(--bg-light);padding:1rem 1.5rem;border-radius:var(--radius);min-width:260px;
+}
+#add-module-overlay h3{margin-bottom:.7rem;text-align:center;}
+#add-module-overlay button{
+  width:100%;padding:.55rem;background:var(--accent);border:none;border-radius:4px;
+  color:var(--text);margin-top:.55rem;cursor:pointer;
+}
+#add-module-overlay button:hover{filter:brightness(1.1);}
+</style>
+</head>
+<body>
+
+<header>
+  <h4>Command Center</h4>
+  <button id="add-module-btn">+ Add Module</button>
+  <select id="layout-select"><option value="">— Layouts —</option></select>
+  <button id="save-layout-btn">Save Layout</button>
+</header>
+
+<div id="dashboard">
+  <!-- Date / Time -->
+  <div class="widget" id="datetime-widget" style="width:260px;height:120px;top:20px;left:20px;">
+    <div class="widget-header"><h2 contenteditable="true">Date & Time</h2>
+      <div class="widget-controls"><button class="collapse-btn">_</button><button class="close-btn">✖</button></div>
+    </div>
+    <div class="widget-content">
+      <div id="time-display">--:-- --</div>
+      <div id="day-display">---</div>
+      <div id="date-display">---</div>
+    </div>
+  </div>
+
+  <!-- POD Workflows (kept) -->
+  <div class="widget" id="pod-widget" style="width:320px;height:260px;top:20px;left:320px;">
+    <div class="widget-header"><h2 contenteditable="true">POD Workflows</h2>
+      <div class="widget-controls"><button class="collapse-btn">_</button><button class="close-btn">✖</button></div>
+    </div>
+    <div class="widget-content" style="overflow:auto;">
+      <ul>
+        <li><strong>Redbubble</strong> – $500 
+          <button onclick="openTabs(['https://chatgpt.com/g/g-6r2jsPz1Y-red-bubble-ultimate-assistant','file:///C:/Users/Sean/Documents/__Tshirts_2024/AI-assisted-uploading-tool/RedBubbleAssistant__ZZ9-B.html','https://www.redbubble.com/portfolio/images/new?ref=account-nav-dropdown'])">Open Tools</button></li>
+        <li><strong>TeePublic</strong> – $300 
+          <button onclick="openTabs(['https://chatgpt.com/g/g-d9Cn7c2i9-teepublic-seo-generator','file:///C:/Users/Sean/Documents/__Tshirts_2024/AI-assisted-uploading-tool/Title-Tag-Desc-TOOL7.html','https://www.teepublic.com/designs/71096573/edit'])">Open Tools</button></li>
+        <li><strong>Amazon Merch</strong> – $800 
+          <button onclick="openTabs(['https://chatgpt.com/g/g-JZ7GiJf5o-merch-monster','https://chatgpt.com/g/g-v6vQY2KAf-chat-gpt-merch-on-demand-listing-creator','file:///C:/Users/Sean/Documents/__Tshirts_2024/AI-assisted-uploading-tool/Best-Title-Tag-Description-Tools/AmazonMerch-Title-Descr-Tool_3-BB.html','https://merch.amazon.com/designs/new'])">Open Tools</button></li>
+        <li><strong>Amazon KDP</strong> – $400 
+          <button onclick="openTabs(['https://kdp.amazon.com','file:///C:/Users/Sean/Documents/__Tshirts_2024/AI-assisted-uploading-tool/KDPAssistant.html'])">Open Tools</button></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Design List -->
+  <div class="widget" id="design-list-widget" style="width:340px;height:400px;top:320px;left:20px;">
+    <div class="widget-header"><h2 contenteditable="true">Design List</h2>
+      <div class="widget-controls"><button class="collapse-btn">_</button><button class="close-btn">✖</button></div>
+    </div>
+    <div class="widget-content">
+      <input id="design-input" type="text" placeholder="Add a new design…">
+      <ul id="design-list">
+        <li class="pinned list-item" style="font-weight:bold;">
+          <span style="flex:1;">Design Name</span><span id="sort-amz" style="cursor:pointer;">AMZ ↕</span><span id="sort-rb" style="cursor:pointer;">RB ↕</span><span id="sort-tp" style="cursor:pointer;">TP ↕</span><span style="width:22px;"></span>
+        </li>
+      </ul>
+      <button id="clear-list-btn" style="margin-top:.5rem;">Clear List</button>
+    </div>
+  </div>
+
+  <!-- To‑Do List -->
+  <div class="widget" id="todo-widget" style="width:320px;height:400px;top:320px;left:380px;">
+    <div class="widget-header"><h2 contenteditable="true">To‑Do List</h2>
+      <div class="widget-controls"><button class="collapse-btn">_</button><button class="close-btn">✖</button></div>
+    </div>
+    <div class="widget-content">
+      <input id="todo-input" placeholder="Add a new task…">
+      <ul id="todo-list"></ul>
+    </div>
+  </div>
+
+  <!-- YouTube Player -->
+  <div class="widget" id="youtube-widget" style="width:500px;height:360px;top:20px;left:660px;">
+    <div class="widget-header"><h2 contenteditable="true">YouTube Player</h2>
+      <div class="widget-controls"><button class="collapse-btn">_</button><button class="close-btn">✖</button></div>
+    </div>
+    <div class="widget-content" style="display:flex;flex-direction:column;gap:.5rem;">
+      <textarea id="video-data-input" style="width:100%;height:50px;" placeholder="Paste CSV rows here…"></textarea>
+      <button id="load-video-button">Load Videos</button>
+      <div id="video-buttons" style="display:flex;flex-wrap:wrap;gap:.4rem;"></div>
+      <div id="mini-player" style="flex:1;background:var(--bg-dark);border-radius:6px;display:flex;align-items:center;justify-content:center;">Mini Player</div>
+    </div>
+  </div>
+</div><!-- /dashboard -->
+
+<!-- ADD MODULE OVERLAY -->
+<div id="add-module-overlay">
+  <div class="panel">
+    <h3>Add New Module</h3>
+    <button data-module="note">Note Module</button>
+    <button data-module="rss">RSS Feed Module</button>
+    <button id="cancel-add-module">Cancel</button>
+  </div>
+</div>
+
+<script>
+/* ---------- UTILITIES ---------- */
+const $  = (sel,ctx=document)=>ctx.querySelector(sel);
+const $$ = (sel,ctx=document)=>[...ctx.querySelectorAll(sel)];
+
+/* ---------- DATE/TIME ---------- */
+function updateDateTime(){
+  const now=new Date();
+  let h=now.getHours(),m=String(now.getMinutes()).padStart(2,'0');
+  const ampm=h>=12?'PM':'AM';h=h%12||12;
+  $('#time-display').textContent=`${h}:${m} ${ampm}`;
+  $('#day-display').textContent=now.toLocaleDateString(undefined,{weekday:'long'});
+  $('#date-display').textContent=now.toLocaleDateString(undefined,{month:'long',day:'numeric',year:'numeric'});
+}
+setInterval(updateDateTime,1000);updateDateTime();
+
+/* ---------- POD openTabs helper ---------- */
+function openTabs(urls){let blocked=false;urls.forEach(u=>{const tab=window.open(u,'_blank','noopener');if(!tab)blocked=true;});if(blocked)alert('Pop‑ups were blocked.');}
+
+/* ---------- DESIGN LIST ---------- */
+const designInput=$('#design-input'),designList=$('#design-list');
+function addDesign(name,st={amazon:false,redbubble:false,teepublic:false}){
+  const li=document.createElement('li');li.className='list-item';
+  const nameSpan=document.createElement('span');nameSpan.textContent=name;nameSpan.style.flex='1';
+  const mk=(c)=>{const x=document.createElement('input');x.type='checkbox';x.checked=!!st[c];x.onchange=saveDesigns;return x;}
+  li.append(nameSpan,mk('amazon'),mk('redbubble'),mk('teepublic'));
+  const rm=document.createElement('button');rm.textContent='✖';rm.onclick=()=>{li.remove();saveDesigns();};
+  li.appendChild(rm);designList.appendChild(li);saveDesigns();
+}
+designInput.onkeydown=e=>{if(e.key==='Enter'&&designInput.value.trim()){addDesign(designInput.value.trim());designInput.value='';}};
+function saveDesigns(){const arr=$$('#design-list .list-item').map(li=>{const [n,a,r,t]=li.children;return{name:n.textContent,amazon:a.checked,redbubble:r.checked,teepublic:t.checked};});localStorage.setItem('designs',JSON.stringify(arr));}
+function loadDesigns(){JSON.parse(localStorage.getItem('designs')||'[]').forEach(d=>addDesign(d.name,d));}
+$('#clear-list-btn').onclick=()=>{$$('#design-list .list-item').forEach(li=>li.remove());saveDesigns();}
+loadDesigns();
+
+/* ---------- TO‑DO LIST ---------- */
+const todoInput=$('#todo-input'),todoList=$('#todo-list');
+function addTask(txt){
+  const li=document.createElement('li');li.className='list-item';
+  const span=document.createElement('span');span.textContent=txt;
+  const rm=document.createElement('button');rm.textContent='✖';rm.onclick=()=>{li.remove();saveTasks();};
+  li.append(span,rm);todoList.appendChild(li);saveTasks();
+}
+todoInput.onkeydown=e=>{if(e.key==='Enter'&&todoInput.value.trim()){addTask(todoInput.value.trim());todoInput.value='';}};
+function saveTasks(){const arr=$$('#todo-list span').map(s=>s.textContent);localStorage.setItem('tasks',JSON.stringify(arr));}
+function loadTasks(){JSON.parse(localStorage.getItem('tasks')||'[]').forEach(addTask);}
+loadTasks();
+
+/* ---------- INTERACT.JS (drag + resize) ---------- */
+function initInteract(node){
+  interact(node).draggable({
+    listeners:{move(evt){move(evt)},end:saveLayout},
+    inertia:true,modifiers:[interact.modifiers.restrictRect({restriction:'parent',endOnly:true})]
+  }).resizable({
+    edges:{left:true,right:true,top:true,bottom:true},
+    listeners:{move(evt){resize(evt)},end:saveLayout},
+    inertia:true,modifiers:[interact.modifiers.restrictEdges({outer:'parent'})]
+  });
+}
+function move(e){const t=e.target;const x=(parseFloat(t.dataset.x)||0)+e.dx;const y=(parseFloat(t.dataset.y)||0)+e.dy;t.style.transform=`translate(${x}px,${y}px)`;t.dataset.x=x;t.dataset.y=y;}
+function resize(e){
+  const t=e.target;let x=parseFloat(t.dataset.x)||0,y=parseFloat(t.dataset.y)||0;
+  Object.assign(t.style,{width:`${e.rect.width}px`,height:`${e.rect.height}px`});
+  x+=e.deltaRect.left;y+=e.deltaRect.top;t.style.transform=`translate(${x}px,${y}px)`;t.dataset.x=x;t.dataset.y=y;
+}
+$$('.widget').forEach(w=>{initInteract(w);attachWidgetEvents(w);});
+
+/* ---------- WIDGET HEADER CONTROLS ---------- */
+function attachWidgetEvents(w){
+  $('.collapse-btn',w).onclick=()=>{w.classList.toggle('collapsed');saveLayout();};
+  $('.close-btn',w).onclick=()=>{w.remove();saveLayout();};
+  $('h2',w).addEventListener('blur',saveLayout);
+}
+
+/* ---------- LAYOUT PERSISTENCE ---------- */
+function saveLayout(){
+  const data=$$('.widget').map(w=>({
+    id:w.id,html:w.outerHTML,
+    x:+w.dataset.x||0,y:+w.dataset.y||0,
+    w:w.offsetWidth,h:w.offsetHeight,collapsed:w.classList.contains('collapsed')
+  }));
+  localStorage.setItem('currentLayout',JSON.stringify(data));
+}
+function loadLayout(key='currentLayout'){
+  const d=JSON.parse(localStorage.getItem(key)||'null');if(!d)return;
+  const dash=$('#dashboard');dash.innerHTML='';
+  d.forEach(o=>{
+    const wrap=document.createElement('div');wrap.innerHTML=o.html;
+    const w=wrap.firstElementChild;
+    w.style.width=o.w+'px';w.style.height=o.h+'px';
+    w.dataset.x=o.x;w.dataset.y=o.y;
+    w.style.transform=`translate(${o.x}px,${o.y}px)`;if(o.collapsed)w.classList.add('collapsed');
+    dash.appendChild(w);initInteract(w);attachWidgetEvents(w);
+  });
+  rebuildOverlayButtons();
+}
+loadLayout();
+
+/* ---------- SAVE / LOAD NAMED LAYOUTS ---------- */
+function refreshLayoutMenu(){
+  const sel=$('#layout-select');sel.innerHTML='<option value="">— Layouts —</option>';
+  Object.keys(localStorage).filter(k=>k.startsWith('layout_')).forEach(k=>{
+    const o=document.createElement('option');o.value=k;o.textContent=k.replace('layout_','');sel.appendChild(o);
+  });
+}
+$('#save-layout-btn').onclick=()=>{const n=prompt('Layout name?');if(!n)return;saveLayout();localStorage.setItem('layout_'+n,localStorage.getItem('currentLayout'));refreshLayoutMenu();};
+$('#layout-select').onchange=e=>{if(e.target.value)loadLayout(e.target.value);};
+refreshLayoutMenu();
+
+/* ---------- ADD MODULE OVERLAY ---------- */
+$('#add-module-btn').onclick=()=>{$('#add-module-overlay').style.display='flex';};
+$('#cancel-add-module').onclick=()=>{$('#add-module-overlay').style.display='none';};
+function rebuildOverlayButtons(){$$('#add-module-overlay [data-module]').forEach(b=>b.onclick=()=>{createModule(b.dataset.module);$('#add-module-overlay').style.display='none';});}
+rebuildOverlayButtons();
+let moduleCounter=0;
+function createModule(type){
+  moduleCounter++;
+  const id=`module-${type}-${moduleCounter}`;
+  const w=document.createElement('div');w.className='widget';w.id=id;
+  w.style.cssText='width:260px;height:160px;top:90px;left:90px;';
+  w.innerHTML=`
+    <div class="widget-header"><h2 contenteditable="true">${type[0].toUpperCase()+type.slice(1)}</h2>
+      <div class="widget-controls"><button class="collapse-btn">_</button><button class="close-btn">✖</button></div>
+    </div>
+    <div class="widget-content">${type==='note'
+      ? '<textarea style="width:100%;height:100%;background:var(--bg-dark);color:var(--text);border:none;resize:none;"></textarea>'
+      : '<p>RSS Feed Placeholder</p>'}</div>`;
+  $('#dashboard').appendChild(w);initInteract(w);attachWidgetEvents(w);saveLayout();
+}
+
+/* ---------- YOUTUBE MINI‑PLAYER ---------- */
+$('#load-video-button').onclick=()=>{
+  const rows=$('#video-data-input').value.trim().split('\n').filter(l=>l);
+  const btns=$('#video-buttons');btns.innerHTML='';
+  rows.slice(1).forEach(r=>{
+    const parts=r.split(',');if(parts.length<3)return;
+    const id=parts[1].trim(),title=parts[2].trim();
+    const b=document.createElement('button');b.textContent=title;
+    b.onclick=()=>{$('#mini-player').innerHTML=`<iframe src="https://www.youtube.com/embed/${id}" allowfullscreen style="width:100%;height:100%;border:none;border-radius:6px;"></iframe>`;};
+    btns.appendChild(b);
+  });
+};
+
+/* ---------- SAVE ON UNLOAD ---------- */
+window.addEventListener('beforeunload',saveLayout);
+</script>
+<!-- Button to choose folder once -->
+<button id="chooseFolder">Select Image Folder</button>
+<div id="thumbGrid" class="grid grid-cols-4 gap-2 p-2"></div>
+
+<script type="module">
+  async function loadImages(dirHandle) {
+    const grid = document.getElementById('thumbGrid');
+    grid.innerHTML = '';
+    for await (const entry of dirHandle.values()) {
+      if (entry.kind === 'file' && /\.(png|jpe?g|gif)$/i.test(entry.name)) {
+        const file = await entry.getFile();
+        const url  = URL.createObjectURL(file);
+        const img  = new Image();
+        img.src    = url;
+        img.className = 'w-24 h-24 object-cover rounded shadow cursor-pointer';
+        img.onclick  = () => window.open(url);   // default viewer
+        grid.append(img);
+      }
+    }
+    // Save the handle for later sessions
+    const db = await (await window.indexedDB.open('handles', 1)).result;
+    const tx = db.transaction('store', 'readwrite').objectStore('store');
+    tx.put(dirHandle, 'imageDir');
+  }
+
+  document.getElementById('chooseFolder').onclick = async () => {
+    const dirHandle = await window.showDirectoryPicker();
+    await loadImages(dirHandle);
+  };
+
+  // On load, try to restore previous handle
+  (async () => {
+    const dbReq = indexedDB.open('handles', 1);
+    dbReq.onupgradeneeded = e => e.target.result.createObjectStore('store');
+    dbReq.onsuccess = async e => {
+      const db   = e.target.result;
+      const tx   = db.transaction('store').objectStore('store');
+      const hReq = tx.get('imageDir');
+      hReq.onsuccess = async () => {
+        const handle = hReq.result;
+        if (handle && await handle.requestPermission({mode:'read'}) === 'granted') {
+          loadImages(handle);
+        }
+      };
+    };
+  })();
+</script>
+
+</body>
+</html>
