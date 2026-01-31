@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Robot Interface</title>
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #000; color: #0f0; text-align: center; padding: 20px; }
+        #screen { width: 500px; height: 300px; background: #111; margin: 0 auto 15px; border: 2px solid #0f0; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;}
+        #chat { width: 500px; height: 120px; background: #111; margin: 10px auto; overflow-y: auto; padding: 10px; text-align: left; border: 1px solid #333; color: #0f0; }
+        #input-area { display: flex; justify-content: center; gap: 5px; }
+        input { width: 300px; padding: 10px; background: #222; border: 1px solid #0f0; color: #0f0; outline: none; }
+        button { padding: 10px 20px; cursor: pointer; background: #0f0; color: black; border: none; font-weight: bold; }
+        video, audio, img { width: 100%; height: 100%; object-fit: contain; }
+    </style>
+</head>
+<body>
+
+    <div id="screen">
+        <video id="v" style="display:none"></video>
+        <audio id="a" style="display:none"></audio>
+        <img id="g" style="display:none">
+        <div id="status">SYSTEM ONLINE</div>
+    </div>
+
+    <div id="chat"></div>
+
+    <div id="input-area">
+        <input type="text" id="userInput" placeholder="COMMAND...">
+        <button onclick="askAI()">EXECUTE</button>
+    </div>
+
+<script>
+    // --- YOUR MEDIA TRIGGERS ---
+    const myFiles = [
+        { trigger: "hello", file: "computer_on.wav", type: "audio" },
+        { trigger: "yes", file: "affirmative.wav", type: "audio" },
+        { trigger: "no", file: "access.wav", type: "audio" },
+        { trigger: "error", file: "human_error.wav", type: "audio" },
+        { trigger: "!", file: "knight_rider_volume.wav", type: "audio" },
+        { trigger: "sure", file: "quite_sure.wav", type: "audio" },
+        { trigger: "glitch", file: "glitch.gif", type: "gif" }
+    ];
+
+    const ziggySounds = ["handlink.mp3"];
+
+    async function askAI() {
+        const inputField = document.getElementById('userInput');
+        const input = inputField.value.trim();
+        if (!input) return;
+        
+        updateChat("USER", input);
+        inputField.value = "";
+        document.getElementById('status').innerText = "THINKING...";
+
+        // STEERING PROMPT: Forces AI to choose a trigger word if possible
+        const triggerList = myFiles.map(f => f.trigger).join(", ");
+        const steeringPrompt = `You are a robotic controller. 
+        PRIMARY RULE: If user intent matches a trigger [${triggerList}], reply with ONLY that word. No punctuation.
+        SECONDARY RULE: If no match, start with [ZIGGY] and answer.
+        User: ${input}`;
+
+        try {
+            const response = await puter.ai.chat(steeringPrompt);
+            // Clean response for exact matching (lowercase, no periods)
+            const aiText = response.toString().trim().toLowerCase().replace(/\./g, '');
+            handleLogic(aiText);
+        } catch (err) {
+            document.getElementById('status').innerText = "OFFLINE";
+        }
+    }
+
+    function handleLogic(text) {
+        const v = document.getElementById('v'), a = document.getElementById('a'), g = document.getElementById('g'), s = document.getElementById('status');
+        [v, a, g, s].forEach(el => el.style.display = "none");
+
+        // EXACT MATCH CHECK
+        const match = myFiles.find(f => text === f.trigger.toLowerCase());
+
+        if (match) {
+            // SUCCESS: Play file. Silent chat. No robot voice.
+            playMedia(match.file, match.type);
+            s.style.display = "block";
+            s.innerText = "MATCH: " + match.trigger.toUpperCase();
+        } else {
+            // FALLBACK: Play Ziggy sound + Print Text + Robot Voice
+            playMedia(ziggySounds[0], "audio");
+            const cleanText = text.replace("[ziggy]", "").trim();
+            updateChat("AI", cleanText);
+            speak(cleanText);
+        }
+    }
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.pitch = 0.5; // Deep robot tone
+        msg.rate = 1.0;
+        window.speechSynthesis.speak(msg);
+    }
+
+    function playMedia(src, type) {
+        const v = document.getElementById('v'), a = document.getElementById('a'), g = document.getElementById('g');
+        if (type === 'video') { v.src = src; v.style.display = "block"; v.play(); }
+        else if (type === 'audio') { a.src = src; a.style.display = "block"; a.play(); }
+        else if (type === 'gif') { g.src = src; g.style.display = "block"; }
+    }
+
+    function updateChat(user, text) {
+        const chat = document.getElementById('chat');
+        chat.innerHTML += `<div>> ${user}: ${text}</div>`;
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Enter key listener
+    document.getElementById('userInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') askAI();
+    });
+</script>
+</body>
+</html>
