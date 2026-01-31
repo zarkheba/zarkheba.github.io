@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>I-40 Traffic Cam Viewer</title>
+<style>
+  body {
+    margin: 0;
+    background: #000;
+    color: #eee;
+    font-family: Arial, sans-serif;
+    text-align: center;
+  }
+
+  #viewer {
+    width: 100vw;
+    height: calc(100vh - 80px);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+  }
+
+  #viewer img {
+    height: 100%;
+    width: auto;
+
+    /* zoom factor */
+    transform: scale(1.35);
+
+    /* keep center framed */
+    transform-origin: center center;
+  }
+
+  button {
+    margin: 10px;
+    padding: 10px 16px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h2 id="label"></h2>
+
+<div id="viewer">
+  <img id="cam" alt="Traffic Camera">
+</div>
+
+<button onclick="switchCam()">Switch Camera</button>
+
+<script>
+  const cams = [
+    {
+      name: "I-40 MM44",
+      url: "https://eapps.ncdot.gov/services/traffic-prod/v1/cameras/images?filename=I26_LongShoalsRd.jpg"
+    },
+    {
+      name: "I-40 MM45",
+      url: "https://eapps.ncdot.gov/services/traffic-prod/v1/cameras/images?filename=I26_mm38_5.jpg"
+    }
+  ];
+
+  let index = 0;
+  const img = document.getElementById("cam");
+  const label = document.getElementById("label");
+
+  function loadCam() {
+    img.src = cams[index].url + "&t=" + Date.now();
+    label.textContent = cams[index].name;
+  }
+
+  function switchCam() {
+    index = (index + 1) % cams.length;
+    loadCam();
+  }
+
+  setInterval(loadCam, 10000);
+  loadCam();
+</script>
+
+</body>
+</html>
