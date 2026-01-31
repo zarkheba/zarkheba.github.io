@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Robot Interface</title>
+    <style>
+        body { font-family: 'Courier New', monospace; background: #000; color: #0f0; text-align: center; padding: 20px; }
+        #screen { width: 500px; height: 300px; background: #111; margin: 0 auto 15px; border: 2px solid #0f0; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;}
+        #chat { width: 500px; height: 120px; background: #111; margin: 10px auto; overflow-y: auto; padding: 10px; text-align: left; border: 1px solid #333; color: #0f0; }
+        #input-area { display: flex; justify-content: center; gap: 5px; }
+        input { width: 300px; padding: 10px; background: #222; border: 1px solid #0f0; color: #0f0; outline: none; }
+        button { padding: 10px 20px; cursor: pointer; background: #0f0; color: black; border: none; font-weight: bold; }
+        video, audio, img { width: 100%; height: 100%; object-fit: contain; }
+    </style>
+</head>
+<body>
+
+    <div id="screen">
+        <video id="v" style="display:none"></video>
+        <audio id="a" style="display:none"></audio>
+        <img id="g" style="display:none">
+        <div id="status">CORE READY</div>
+    </div>
+
+    <div id="chat"></div>
+
+    <div id="input-area">
+        <input type="text" id="userInput" placeholder="TYPE COMMAND...">
+        <button id="sendBtn" onclick="askAI()">EXECUTE</button>
+    </div>
+
+<script>
+    // --- YOUR FILES (Make sure these are in the same folder!) ---
+    const myFiles = [
+        { trigger: "hello", file: "computer_on.wav", type: "audio" },
+        { trigger: "yes", file: "affirmative.wav", type: "audio" },
+        { trigger: "no", file: "access.wav", type: "audio" },
+        { trigger: "error", file: "human_error.wav", type: "audio" },
+        { trigger: "!", file: "knight_rider_volume.wav", type: "audio" },
+        { trigger: "sure", file: "quite_sure.wav", type: "audio" }
+    ];
+
+    const ziggySounds = ["beep.mp3", "boop.mp3"];
+
+    async function askAI() {
+        const inputField = document.getElementById('userInput');
+        const input = inputField.value.trim();
+        if (!input) return;
+        
+        updateChat("USER", input);
+        inputField.value = "";
+        document.getElementById('status').innerText = "THINKING...";
+
+        const triggers = myFiles.map(f => f.trigger).join(", ");
+        const instructions = `Respond as a robot. Use triggers: [${triggers}]. If no trigger fits, say [ZIGGY]. User: ${input}`;
+
+        try {
+            // Using a free, no-login public endpoint
+            const response = await fetch("https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ inputs: instructions })
+            });
+
+            const result = await response.json();
+            // Cleaning up the response text
+            let aiText = result[0].generated_text.split("User:")[1]?.split("\n")[1]?.replace("AI:", "").trim() || "ERROR DETECTED";
+            
+            handleLogic(aiText);
+        } catch (err) {
+            document.getElementById('status').innerText = "COMMS FAILURE";
+            console.error(err);
+        }
+    }
+
+    function handleLogic(text) {
+        const v = document.getElementById('v'), a = document.getElementById('a'), g = document.getElementById('g'), s = document.getElementById('status');
+        [v, a, g, s].forEach(el => el.style.display = "none");
+
+        const match = myFiles.find(f => text.toLowerCase().includes(f.trigger.toLowerCase()));
+
+        if (match) {
+            playMedia(match.file, match.type);
+            updateChat("AI", text);
+            speak(text); 
+        } else {
+            const randomZiggy = ziggySounds[0]; // Simplified for now
+            playMedia(randomZiggy, "audio");
+            const cleanText = text.replace("[ZIGGY]", "").trim();
+            updateChat("AI", cleanText);
+            speak(cleanText);
+        }
+    }
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(text);
+        msg.pitch = 0.4; 
+        msg.rate = 1.0;  
+        window.speechSynthesis.speak(msg);
+    }
+
+    function playMedia(src, type) {
+        const v = document.getElementById('v'), a = document.getElementById('a'), g = document.getElementById('g');
+        if (type === 'video') { v.src = src; v.style.display = "block"; v.play(); }
+        else if (type === 'audio') { a.src = src; a.style.display = "block"; a.play(); }
+        else if (type === 'gif') { g.src = src; g.style.display = "block"; }
+    }
+
+    function updateChat(user, text) {
+        const chat = document.getElementById('chat');
+        chat.innerHTML += `<div>> ${user}: ${text}</div>`;
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    document.getElementById('userInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') askAI(); });
+</script>
+</body>
+</html>
