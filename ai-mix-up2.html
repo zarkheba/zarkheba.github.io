@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Media Interface</title>
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        body { font-family: sans-serif; background: #000; color: #0f0; text-align: center; padding: 20px; }
+        #screen { width: 500px; height: 300px; background: #111; margin: 0 auto 15px; border: 2px solid #0f0; display: flex; align-items: center; justify-content: center; }
+        #chat { width: 500px; height: 120px; background: #111; margin: 10px auto; overflow-y: auto; padding: 10px; text-align: left; border: 1px solid #333; font-family: monospace; }
+        #input-area { display: flex; justify-content: center; gap: 5px; }
+        input { width: 350px; padding: 10px; background: #222; border: 1px solid #0f0; color: white; outline: none; }
+        button { padding: 10px 20px; cursor: pointer; background: #0f0; color: black; border: none; font-weight: bold; }
+        video, audio { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+
+    <div id="screen">
+        <video id="v" style="display:none"></video>
+        <audio id="a" style="display:none"></audio>
+        <div id="status">SYSTEM ONLINE</div>
+    </div>
+
+    <div id="chat"></div>
+
+    <div id="input-area">
+        <input type="text" id="userInput" placeholder="COMMAND...">
+        <button id="sendBtn" onclick="askAI()">SEND</button>
+    </div>
+
+<script>
+    // --- ADD AS MANY TRIGGERS AS YOU WANT HERE ---
+    const myFiles = [
+        { trigger: "hello", file: "computer_on.wav", type: "audio" },
+        { trigger: "yes", file: "affirmative.wav", type: "audio" },
+        { trigger: "no", file: "access.wav", type: "audio" }
+        { trigger: "error", file: "human_error.wav", type: "audio" }
+        { trigger: "!", file: "knight_rider_volume.wav", type: "audio" }
+        { trigger: "sure", file: "quite_sure.wav", type: "audio" }
+    ];
+
+    // Sound to play if the AI doesn't find a trigger match
+    const fallbacks = ["static.mp3"];
+
+    async function askAI() {
+        const inputField = document.getElementById('userInput');
+        const input = inputField.value.trim();
+        if (!input) return;
+        
+        // Show user message in chat
+        updateChat("USER", input);
+        inputField.value = "";
+        document.getElementById('status').innerText = "THINKING...";
+
+        // The "Invisible" wrapper
+        const triggers = myFiles.map(f => f.trigger).join(", ");
+        const prompt = `System: Look for these triggers: [${triggers}]. 
+        If the user's message matches the INTENT of a trigger, reply with ONLY the trigger word. 
+        Otherwise, reply: "NONE: [your response]". 
+        User: ${input}`;
+
+        try {
+            // This calls the AI. It might show a small Puter "Continue" popup the first time.
+            const response = await puter.ai.chat(prompt);
+            const aiText = response.toString().trim();
+            handleLogic(aiText);
+        } catch (err) {
+            console.error(err);
+            document.getElementById('status').innerText = "ERROR";
+        }
+    }
+
+    function handleLogic(text) {
+        const vid = document.getElementById('v');
+        const aud = document.getElementById('a');
+        const status = document.getElementById('status');
+
+        vid.style.display = aud.style.display = "none";
+        status.style.display = "none";
+
+        // Check if the AI returned one of our trigger words
+        const match = myFiles.find(f => text.toLowerCase().includes(f.trigger.toLowerCase()));
+
+        if (match && !text.includes("NONE:")) {
+            play(match.file, match.type);
+            updateChat("AI", `[Playing: ${match.trigger}]`);
+        } else {
+            // Fallback logic
+            play(fallbacks[0], "audio");
+            updateChat("AI", text.replace("NONE:", ""));
+        }
+    }
+
+    function play(src, type) {
+        const player = (type === 'video') ? document.getElementById('v') : document.getElementById('a');
+        player.src = src;
+        player.style.display = "block";
+        player.play().catch(() => {
+            // Browser blocked autoplay - show text
+            document.getElementById('status').style.display = "block";
+            document.getElementById('status').innerText = "CLICK TO HEAR RESPONSE";
+        });
+    }
+
+    function updateChat(user, text) {
+        const chat = document.getElementById('chat');
+        chat.innerHTML += `<div>> ${user}: ${text}</div>`;
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Allow "Enter" key to send
+    document.getElementById('userInput').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') askAI();
+    });
+
+
+
+async function askAI() {
+    const inputField = document.getElementById('userInput');
+    const input = inputField.value.trim();
+    if (!input) return;
+    
+    updateChat("USER", input);
+    inputField.value = "";
+    document.getElementById('status').innerText = "THINKING...";
+
+    // Updated trigger list for the AI
+    const triggers = myFiles.map(f => f.trigger).join(", ");
+    
+    // We add a "System" instruction to be extremely strict
+    const prompt = `You are a media controller. 
+    Triggers: [${triggers}].
+    If the user message matches a trigger, reply ONLY with that trigger word.
+    If no match, reply: "NONE: [your response]".
+    User message: ${input}`;
+
+    try {
+        // Puter.js works great on GitHub Pages
+        const response = await puter.ai.chat(prompt);
+        handleLogic(response.toString().trim());
+    } catch (err) {
+        document.getElementById('status').innerText = "AI OFFLINE";
+    }
+}
+</script>
+</body>
+</html>
