@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>I-40 Traffic Cam Viewer</title>
+<style>
+  body {
+    margin: 0;
+    background: #000;
+    color: #eee;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  #viewer {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    box-sizing: border-box;
+    border: 5px solid #444; 
+  }
+
+  #cam {
+    height: 100%;
+    width: 133%;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  h2 {
+    position: fixed;
+    top: 20px;
+    left: 0;
+    width: 100%;
+    z-index: 10;
+    margin: 0;
+    pointer-events: none;
+    text-shadow: 2px 2px 4px #000;
+  }
+
+  button {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    min-width: 220px;
+    padding: 20px 30px;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    border: 2px solid #888;
+    border-radius: 12px;
+  }
+</style>
+</head>
+<body>
+
+<h2 id="label"></h2>
+
+<div id="viewer">
+  <img id="cam" alt="Traffic Camera">
+</div>
+
+<button onclick="switchCam()">Switch Camera</button>
+
+<script>
+  const cams = [
+    {
+      name: "I-40 MM44",
+      url: "https://eapps.ncdot.gov/services/traffic-prod/v1/cameras/images?filename=I26_LongShoalsRd.jpg"
+    },
+    {
+      name: "I-40 MM45",
+      url: "https://eapps.ncdot.gov/services/traffic-prod/v1/cameras/images?filename=I26_mm38_5.jpg"
+    }
+  ];
+
+  let index = 0;
+  let fetchInterval;
+  const img = document.getElementById("cam");
+  const label = document.getElementById("label");
+
+  function loadCam() {
+    img.src = cams[index].url + "&t=" + Date.now();
+    label.textContent = cams[index].name;
+  }
+
+  function switchCam() {
+    index = (index + 1) % cams.length;
+    loadCam();
+  }
+
+  function stopFetching() {
+    clearInterval(fetchInterval);
+    console.log("Fetching stopped to save data.");
+  }
+
+  // Start fetching every 10 seconds
+  fetchInterval = setInterval(loadCam, 10000);
+
+  // Auto-stop after 60 seconds
+  setTimeout(stopFetching, 60000);
+
+  // Kill fetching if app goes to background (Safari visibility API)
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopFetching();
+    }
+  });
+
+  loadCam();
+</script>
+
+</body>
+</html>
