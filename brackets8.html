@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Story Pitch Greenlight: Studio Slate</title>
+    <style>
+        :root { 
+            --accent: #3b82f6; 
+            --bg: #0f172a; 
+            --panel: #1e293b; 
+            --text: #f1f5f9; 
+            --subtle: #94a3b8;
+            --win: #22c55e;
+            --border-ui: #334155;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow: hidden; width: 100vw; height: 100vh; }
+        
+        /* Navigation */
+        .nav-header { position: fixed; top: 0; width: 100%; background: rgba(15, 23, 42, 0.95); padding: 15px; display: flex; justify-content: center; gap: 12px; z-index: 1000; border-bottom: 1px solid var(--border-ui); backdrop-filter: blur(8px); }
+        .nav-btn { background: var(--panel); color: var(--text); border: 1px solid var(--border-ui); padding: 10px 20px; cursor: pointer; border-radius: 6px; font-weight: bold; transition: 0.3s; font-size: 13px; }
+        .nav-btn:hover, .nav-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+        /* The Stage */
+        #stage { 
+            position: absolute; width: 3000px; height: 1600px; 
+            display: flex; align-items: center; justify-content: center; 
+            transition: transform 0.7s cubic-bezier(0.65, 0, 0.35, 1);
+            transform-origin: 0 0;
+            border: 4px solid transparent; border-radius: 40px;
+        }
+        #stage.main-active { border-color: var(--accent); background: rgba(59, 130, 246, 0.02); }
+        
+        .wing { display: flex; flex-direction: column; gap: 60px; }
+        .center-court { width: 700px; display: flex; flex-direction: column; align-items: center; margin: 0 60px; }
+
+        .division-view { display: flex; gap: 25px; padding: 40px; border: 4px solid transparent; border-radius: 25px; transition: all 0.5s; }
+        .division-view.isolated { border-color: var(--accent); background: rgba(255,255,255,0.03); }
+
+        /* Matchups */
+        .round { display: flex; flex-direction: column; justify-content: space-around; width: 230px; height: 600px; }
+        .round-label { font-size: 16px; text-transform: uppercase; color: var(--accent); letter-spacing: 3px; text-align: center; font-weight: 900; margin-bottom: 15px; }
+        .matchup { background: var(--panel); border: 1px solid var(--border-ui); padding: 12px; margin: 10px 0; border-radius: 10px; cursor: pointer; transition: 0.2s; }
+        .matchup:hover { border-color: var(--accent); background: #263449; }
+        
+        .book-slot { display: flex; align-items: center; gap: 12px; height: 45px; font-size: 13px; }
+        .book-slot img { width: 32px; height: 45px; background: #0f172a; border-radius: 3px; }
+        .score-pill { margin-left: auto; font-size: 11px; background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 12px; color: var(--subtle); font-weight: 800; }
+        .winner-text { color: var(--win); font-weight: bold; }
+
+        .champ-header { color: #facc15; letter-spacing: 6px; margin-bottom: 40px; font-size: 42px; font-weight: 900; text-align: center; line-height: 1.1; text-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+
+        /* Modal / Ranking */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .modal { background: #fff; color: #1e293b; padding: 35px; border-radius: 20px; width: 650px; display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+        .modal-header { grid-column: span 2; text-align: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 15px; }
+        .judge-side { display: flex; flex-direction: column; gap: 12px; background: #f8fafc; padding: 20px; border-radius: 12px; }
+        .judge-side img { width: 90px; height: 130px; border-radius: 6px; align-self: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .rank-row { display: flex; flex-direction: column; margin-top: 5px; }
+        .rank-row label { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+        .total-display { font-size: 24px; font-weight: 900; text-align: center; margin-top: 15px; color: var(--accent); border-top: 2px dashed #e2e8f0; padding-top: 10px; }
+        .submit-btn { grid-column: span 2; background: var(--accent); color: white; padding: 18px; border: none; border-radius: 10px; font-weight: 900; cursor: pointer; font-size: 16px; transition: 0.2s; }
+    </style>
+</head>
+<body>
+
+<div class="nav-header">
+    <button class="nav-btn active" id="btn-full" onclick="zoomTo('full')">FULL VIEW</button>
+    <button class="nav-btn" onclick="zoomTo('Div-Life')">LIFE</button>
+    <button class="nav-btn" onclick="zoomTo('Div-Travel')">TRAVEL</button>
+    <button class="nav-btn" onclick="zoomTo('Finals')">FINAL FOUR</button>
+    <button class="nav-btn" onclick="zoomTo('Div-Professional')">PROFESSIONAL</button>
+    <button class="nav-btn" onclick="zoomTo('Div-Family')">FAMILY</button>
+</div>
+
+<div id="stage">
+    <div class="wing">
+        <div id="Div-Life" class="division-view"></div>
+        <div id="Div-Travel" class="division-view"></div>
+    </div>
+    <div class="center-court division-view" id="Finals">
+        <h2 class="champ-header">FILM PITCH<br>GREENLIGHT</h2>
+        <div id="FF-Slots" style="display:flex; flex-direction:column; gap:60px; align-items:center;"></div>
+        <div id="champ-name" style="margin-top:50px; font-size: 36px; color: #facc15; font-weight: 900; text-align: center;"></div>
+    </div>
+    <div class="wing">
+        <div id="Div-Professional" class="division-view" style="flex-direction: row-reverse;"></div>
+        <div id="Div-Family" class="division-view" style="flex-direction: row-reverse;"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="overlay">
+    <div class="modal">
+        <div class="modal-header"><h2 id="mTitle" style="margin:0; font-weight: 900;">Judging Round</h2></div>
+        <div class="judge-side">
+            <img id="imgA"> <strong id="nameA" style="text-align:center;">Book A</strong>
+            <div class="rank-row"><label id="q1_A"></label><input type="range" min="1" max="5" value="3" id="rA1" oninput="calcScores()"></div>
+            <div class="rank-row"><label id="q2_A"></label><input type="range" min="1" max="5" value="3" id="rA2" oninput="calcScores()"></div>
+            <div class="rank-row"><label id="q3_A"></label><input type="range" min="1" max="5" value="3" id="rA3" oninput="calcScores()"></div>
+            <div class="total-display" id="totalA">9</div>
+        </div>
+        <div class="judge-side">
+            <img id="imgB"> <strong id="nameB" style="text-align:center;">Book B</strong>
+            <div class="rank-row"><label id="q1_B"></label><input type="range" min="1" max="5" value="3" id="rB1" oninput="calcScores()"></div>
+            <div class="rank-row"><label id="q2_B"></label><input type="range" min="1" max="5" value="3" id="rB2" oninput="calcScores()"></div>
+            <div class="rank-row"><label id="q3_B"></label><input type="range" min="1" max="5" value="3" id="rB3" oninput="calcScores()"></div>
+            <div class="total-display" id="totalB">9</div>
+        </div>
+        <button class="submit-btn" onclick="resolveMatch()">LOCK SCORES & ADVANCE</button>
+    </div>
+</div>
+
+<script>
+let activeMatchId = null;
+const roundNames = ["", "The Glance", "The Shuffle", "The Pick", "Greenlight"];
+
+const criteria = {
+    1: ["Voice Identity", "Opening Scene", "Hook Clarity"],
+    2: ["Narrative Arc", "Thematic Depth", "Pacing"],
+    3: ["Relatability", "Vulnerability", "Conflict Strength"],
+    4: ["Market Appeal", "Cultural Impact", "Adaptability"]
+};
+
+const memoirData = {
+    'Div-Life': ["Educated", "Glass Castle", "Wild", "Eat Pray Love", "Becoming", "Angela's Ashes", "The Road", "I Know Why The Caged Bird Sings"],
+    'Div-Travel': ["Into the Wild", "A Walk in the Woods", "Notes from a Small Island", "Under the Tuscan Sun", "The Salt Path", "Tracks", "West with the Night", "Motorcycle Diaries"],
+    'Div-Professional': ["Shoe Dog", "Steve Jobs", "Kitchen Confidential", "Born a Crime", "Ride of a Lifetime", "Thinking Fast and Slow", "Lab Girl", "Bossypants"],
+    'Div-Family': ["Hillbilly Elegy", "The Year of Magical Thinking", "The Tender Bar", "Lit", "Fun Home", "Color of Water", "Ordinary Light", "Tuesdays with Morrie"]
+};
+
+function init() {
+    ['Div-Life', 'Div-Travel', 'Div-Professional', 'Div-Family'].forEach(id => buildDivision(id));
+    buildFinals();
+    zoomTo('full');
+}
+
+function zoomTo(id) {
+    const stage = document.getElementById('stage');
+    const navBtns = document.querySelectorAll('.nav-btn');
+    const divs = document.querySelectorAll('.division-view');
+    navBtns.forEach(b => b.classList.remove('active'));
+    divs.forEach(h => h.classList.remove('isolated'));
+    stage.classList.remove('main-active');
+
+    if (id === 'full') {
+        const scale = 0.55;
+        const x = (window.innerWidth - (stage.offsetWidth * scale)) / 2;
+        const y = (window.innerHeight - (stage.offsetHeight * scale)) / 2;
+        stage.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+        stage.classList.add('main-active');
+        return;
+    }
+
+    const target = document.getElementById(id);
+    target.classList.add('isolated');
+    const rect = target.getBoundingClientRect();
+    const stageRect = stage.getBoundingClientRect();
+    const curScale = stageRect.width / stage.offsetWidth;
+    const tx = (window.innerWidth / 2) - (((rect.left - stageRect.left) / curScale) + (rect.width / curScale) / 2);
+    const ty = (window.innerHeight / 2) - (((rect.top - stageRect.top) / curScale) + (rect.height / curScale) / 2);
+    stage.style.transform = `translate(${tx}px, ${ty}px) scale(1)`;
+}
+
+function buildDivision(id) {
+    const cont = document.getElementById(id);
+    const books = memoirData[id];
+    for(let r=1; r<=3; r++){
+        const col = document.createElement('div');
+        col.className = 'round';
+        col.innerHTML = `<div class="round-label">${roundNames[r]}</div>`;
+        const count = [0, 4, 2, 1][r];
+        for(let m=1; m<=count; m++){
+            const mId = `${id}-R${r}-M${m}`;
+            const div = document.createElement('div');
+            div.className = 'matchup'; div.id = mId; div.onclick = () => openJudge(mId, r);
+            let next = (r<3) ? `${id}-R${r+1}-M${Math.ceil(m/2)}` : (id.includes('Life')||id.includes('Travel')?'FF-M1':'FF-M2');
+            div.dataset.next = next; div.dataset.slot = (m%2!==0)?'top':'bottom';
+            if(r===3 && (id.includes('Professional')||id.includes('Family'))) div.dataset.slot = 'bottom';
+            let nA = r===1?books[(m-1)*2]:"TBD", nB = r===1?books[(m-1)*2+1]:"TBD";
+            div.innerHTML = `
+                <div class="book-slot" id="${mId}-t"> <img src="${r===1?`https://picsum.photos/seed/${nA}/50/70`:''}"> <span>${nA}</span> <span class="score-pill">--</span> </div>
+                <hr style="border:0; border-top:1px solid var(--border-ui); margin:6px 0;">
+                <div class="book-slot" id="${mId}-b"> <img src="${r===1?`https://picsum.photos/seed/${nB}/50/70`:''}"> <span>${nB}</span> <span class="score-pill">--</span> </div>`;
+            col.appendChild(div);
+        }
+        cont.appendChild(col);
+    }
+}
+
+function buildFinals() {
+    document.getElementById('FF-Slots').innerHTML = `
+        <div class="matchup" id="FF-M1" data-next="CHAMP" data-slot="top" onclick="openJudge('FF-M1', 4)" style="width:300px">
+            <div class="book-slot" id="FF-M1-t"><img><span>TBD</span><span class="score-pill">--</span></div><hr style="border:0; border-top:1px solid var(--border-ui); margin:6px 0;">
+            <div class="book-slot" id="FF-M1-b"><img><span>TBD</span><span class="score-pill">--</span></div>
+        </div>
+        <div class="matchup" id="FF-M2" data-next="CHAMP" data-slot="bottom" onclick="openJudge('FF-M2', 4)" style="width:300px">
+            <div class="book-slot" id="FF-M2-t"><img><span>TBD</span><span class="score-pill">--</span></div><hr style="border:0; border-top:1px solid var(--border-ui); margin:6px 0;">
+            <div class="book-slot" id="FF-M2-b"><img><span>TBD</span><span class="score-pill">--</span></div>
+        </div>`;
+}
+
+function calcScores() {
+    const sA = parseInt(rA1.value) + parseInt(rA2.value) + parseInt(rA3.value);
+    const sB = parseInt(rB1.value) + parseInt(rB2.value) + parseInt(rB3.value);
+    totalA.innerText = sA; totalB.innerText = sB;
+}
+
+function openJudge(mId, r) {
+    activeMatchId = mId;
+    const match = document.getElementById(mId);
+    const sA = match.querySelector('.book-slot:first-child');
+    const sB = match.querySelector('.book-slot:last-child');
+    if(sA.innerText.includes('TBD')) return;
+    imgA.src = sA.querySelector('img').src; imgB.src = sB.querySelector('img').src;
+    nameA.innerText = sA.querySelector('span').innerText; nameB.innerText = sB.querySelector('span').innerText;
+    mTitle.innerText = "Judging Round: " + roundNames[r];
+    [1,2,3].forEach(i => {
+        document.getElementById(`q${i}_A`).innerText = criteria[r][i-1];
+        document.getElementById(`q${i}_B`).innerText = criteria[r][i-1];
+    });
+    document.getElementById('overlay').style.display = 'flex';
+    calcScores();
+}
+
+function resolveMatch() {
+    const sA = parseInt(totalA.innerText); const sB = parseInt(totalB.innerText);
+    const match = document.getElementById(activeMatchId);
+    const winSlot = sA >= sB ? match.querySelector('.book-slot:first-child') : match.querySelector('.book-slot:last-child');
+    const nextId = match.dataset.next;
+    match.querySelector('.book-slot:first-child .score-pill').innerText = sA;
+    match.querySelector('.book-slot:last-child .score-pill').innerText = sB;
+    winSlot.querySelector('span').classList.add('winner-text');
+    if(nextId === 'CHAMP') {
+        document.getElementById('champ-name').innerText = "🏆 GREENLIT: " + winSlot.querySelector('span').innerText;
+    } else {
+        const target = document.getElementById(nextId).querySelector(match.dataset.slot === 'top' ? '.book-slot:first-child' : '.book-slot:last-child');
+        target.querySelector('span').innerText = winSlot.querySelector('span').innerText;
+        target.querySelector('img').src = winSlot.querySelector('img').src;
+    }
+    document.getElementById('overlay').style.display = 'none';
+}
+
+init();
+</script>
+</body>
+</html>
